@@ -3,7 +3,7 @@
 {
 	"name": "OpenCode Team Berry Fresh",
 	// Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
-	"image": "mcr.microsoft.com/devcontainers/javascript-node:1-20-bullseye",
+	"image": "mcr.microsoft.com/devcontainers/javascript-node:1-22-bookworm",
 
 	// Features to add to the dev container. More info: https://containers.dev/features.
 	// "features": {},
@@ -33,7 +33,8 @@
 
 	// Use 'postCreateCommand' to run commands after the container is created.
 	// this command should download / install Bun, and then add Bun's install location to PATH in .bashrc and .zshrc so bun command works in new terminal
-	"postCreateCommand": "curl -fsSL https://bun.sh/install | bash && echo 'export PATH=\"$HOME/.bun/bin:$PATH\"' >> ~/.bashrc && echo 'export PATH=\"$HOME/.bun/bin:$PATH\"' >> ~/.zshrc"
+	// installs the bun version required by package.json (v1.3.14)
+	"postCreateCommand": "curl -fsSL https://bun.sh/install | bash -s 'bun-v1.3.14' && echo 'export PATH=\"$HOME/.bun/bin:$PATH\"' >> ~/.bashrc && echo 'export PATH=\"$HOME/.bun/bin:$PATH\"' >> ~/.zshrc"
 
 	// Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
 	// "remoteUser": "root"
