@@ -127,7 +127,6 @@ function getEditorRangeLabel(selection: EditorSelection["ranges"][number]) {
 
 function formatEditorContext(selection: EditorSelection) {
   const selected = selection.ranges.filter(hasEditorRangeSelection)
-  if (selected.length === 0)
     return `<system-reminder>Note: The user opened the file "${selection.filePath}". This may or may not be relevant to the current task.</system-reminder>\n`
 
   const ranges = selected.map((range, index) => {
@@ -143,6 +142,10 @@ let stashed: { prompt: PromptInfo; cursor: number } | undefined
 export function Prompt(props: PromptProps) {
   let input: TextareaRenderable
   let anchor: BoxRenderable
+
+  // commentMode false means the prompt is in normal mode, true means the prompt is in comment mode. This is used to determine whether to show the comment placeholder or not.
+  let commentMode  = false
+
   const [inputTarget, setInputTarget] = createSignal<TextareaRenderable | undefined>()
 
   const leader = useLeaderActive()
@@ -355,6 +358,21 @@ export function Prompt(props: PromptProps) {
           if (!handled) return
 
           dialog.clear()
+        },
+      },
+      {
+        title: "Comment selected code",
+        name: "prompt.comment",
+        category: "Prompt",
+        slashName: "comment",
+        run: async () => {
+          commentMode = true
+      
+          toast.show({
+            title: "Comment mode",
+            message: "Paste the code you want to comment.",
+            variant: "info",
+          })
         },
       },
       {
@@ -1181,17 +1199,62 @@ export function Prompt(props: PromptProps) {
   }
 
   async function pasteInputText(text: string) {
+    if (commentMode) {
+      commentMode = false
+  
+      const normalizedText = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n")
+      const code = normalizedText.trim()
+  
+      if (!code) {
+        toast.show({
+          title: "Clipboard is empty",
+          message: "Paste the code you want to comment.",
+          variant: "warning",
+        })
+        return
+      }
+  
+      input.setText(
+        [
+          "Add an appropriate comment for the code below.",
+          "",
+          "Find the exact occurrence of this code in the current workspace.",
+          "Write the comment directly above the matching code.",
+          "Do not modify the code itself.",
+          "Use the commenting convention appropriate for the file's language.",
+          "Keep the comment concise and useful.",
+          "If the code appears in multiple files, determine the most likely intended file from the code and surrounding context.",
+          "",
+          "Selected code:",
+          "```",
+          code,
+          "```",
+        ].join("\n"),
+      )
+  
+      setStore("prompt", {
+        input: input.plainText,
+        parts: [],
+      })
+  
+      await submit()
+      return
+    }
+  
     const normalizedText = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n")
     const pastedContent = normalizedText.trim()
     const filepath = pastedFilepath(pastedContent, terminalEnvironment.platform)
     const isUrl = /^(https?):\/\//.test(filepath)
+  
     if (!isUrl) {
       const attachment = await readLocalAttachment(filepath)
       const filename = path.basename(filepath)
+  
       if (attachment?.type === "text") {
         pasteText(attachment.content, `[SVG: ${filename ?? "image"}]`)
         return
       }
+  
       if (attachment?.type === "binary") {
         await pasteAttachment({
           filename,
@@ -1202,8 +1265,9 @@ export function Prompt(props: PromptProps) {
         return
       }
     }
-
+  
     const lineCount = (pastedContent.match(/\n/g)?.length ?? 0) + 1
+  
     if (
       (lineCount >= 3 || pastedContent.length > 150) &&
       kv.get("paste_summary_enabled", !sync.data.config.experimental?.disable_paste_summary)
@@ -1211,9 +1275,9 @@ export function Prompt(props: PromptProps) {
       pasteText(pastedContent, `[Pasted ~${lineCount} lines]`)
       return
     }
-
+  
     input.insertText(normalizedText)
-
+  
     setTimeout(() => {
       if (!input || input.isDestroyed) return
       input.getLayoutNode().markDirty()
