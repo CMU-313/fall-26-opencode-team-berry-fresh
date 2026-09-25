@@ -1,6 +1,7 @@
 import { createMemo, createResource, createSignal, Show, type JSX } from "solid-js"
 import type { SnapshotFileDiff, VcsFileDiff } from "@opencode-ai/sdk/v2"
 import type { FileDiffInfo } from "@opencode-ai/client/promise"
+import { showToast } from "@/utils/toast"
 import {
   SESSION_REVIEW_V2_SIDEBAR_WIDTH_MAX,
   SESSION_REVIEW_V2_SIDEBAR_WIDTH_MIN,
@@ -56,6 +57,7 @@ export type ReviewPanelV2Props = {
 
 export function ReviewPanelV2(props: ReviewPanelV2Props) {
   const sdk = useSDK()
+  const language = useLanguage()
 
   const diffs = createMemo(() => props.diffs().filter(filterRenderableDiff))
   const filteredFiles = createMemo(() =>
@@ -109,6 +111,24 @@ export function ReviewPanelV2(props: ReviewPanelV2Props) {
         return undefined
       })
 
+  const copyPath = (path: string) => {
+    void navigator.clipboard.writeText(path).then(
+      () => {
+        showToast({
+          variant: "success",
+          title: language.t("session.share.copy.copied"),
+          description: path,
+        })
+      },
+      () => {
+        showToast({
+          variant: "error",
+          title: language.t("toast.session.share.copyFailed.title"),
+        })
+      },
+    )
+  }
+
   return (
     <SessionReviewV2
       title={props.title}
@@ -128,6 +148,7 @@ export function ReviewPanelV2(props: ReviewPanelV2Props) {
           searching={searching}
           kinds={treeKinds}
           activeDiff={activeDiff}
+          onCopyPath={copyPath}
         />
       }
       activeFile={activeDiff()}
@@ -178,6 +199,7 @@ function ReviewPanelV2Sidebar(props: {
   searching: () => boolean
   kinds: () => ReturnType<typeof reviewDiffKinds>
   activeDiff: () => string | undefined
+  onCopyPath: (path: string) => void
 }) {
   const language = useLanguage()
   const [explicitHighlight, setExplicitHighlight] = createSignal<string | undefined>()
@@ -230,6 +252,7 @@ function ReviewPanelV2Sidebar(props: {
               draggable={false}
               active={props.activeDiff()}
               onFileClick={(node) => props.onSelectFile(node.path)}
+              onCopyPath={props.onCopyPath}
             />
           }
         >
@@ -246,6 +269,7 @@ function ReviewPanelV2Sidebar(props: {
                 setExplicitHighlight(path)
                 props.onSelectFile(path)
               }}
+              onCopyPath={props.onCopyPath}
             />
           </Show>
         </Show>
