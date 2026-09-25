@@ -264,6 +264,7 @@ export function createTuiPluginApi(opts: Opts = {}): HostPluginApi {
       Slot: () => null,
       Prompt: () => null,
       toast: () => {},
+      dismissToast: () => {},
       dialog: {
         replace: () => {
           depth = 1

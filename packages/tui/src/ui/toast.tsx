@@ -66,6 +66,12 @@ function init() {
         setStore("currentToast", null)
       }, toastOptions.duration).unref()
     },
+    // Removes the current toast and cancels the auto-dismiss timer
+    hide() {
+      if (timeoutHandle) clearTimeout(timeoutHandle)
+      timeoutHandle = null
+      setStore("currentToast", null)
+    },
     error: (err: any) => {
       if (err instanceof Error)
         return toast.show({

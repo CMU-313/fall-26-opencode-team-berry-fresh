@@ -605,6 +605,8 @@ export type TuiPluginApi = {
     Slot: <Name extends string>(props: TuiSlotProps<Name>) => JSX.Element | null
     Prompt: (props: TuiPromptProps) => JSX.Element
     toast: (input: TuiToast) => void
+    /** Clears the currently visible toast, if any. */
+    dismissToast: () => void
     dialog: TuiDialogStack
   }
   readonly tuiConfig: Frozen<TuiConfigView>

@@ -262,6 +262,10 @@ export function createTuiApiAdapters(input: Input): Omit<TuiPluginApi, "lifecycl
           duration: inputToast.duration,
         })
       },
+      // Exposes toast.hide() to plugins
+      dismissToast() {
+        input.toast.hide()
+      },
       dialog: {
         replace(render, onClose) {
           input.dialog.replace(render, onClose)

@@ -4,6 +4,9 @@ import type { BuiltinTuiPlugin } from "../builtins"
 
 const id = "internal:notifications"
 
+// Specify away time to leave toast in TUI (ms)
+const AWAY_TOAST_MS = 60_000
+
 type SessionError = Extract<Event, { type: "session.error" }>["properties"]["error"]
 
 function notify(api: TuiPluginApi, sessionID: string | undefined, message: string, sound: TuiAttentionSoundName) {
@@ -31,6 +34,26 @@ const tui: TuiPlugin = async (api) => {
   const errored = new Set<string>()
   const questions = new Set<string>()
   const permissions = new Set<string>()
+
+  // Make toast appear when user is away
+  const finishedWhileAway: (string | undefined)[] = []
+  let blurred = false
+  const onBlur = () => {
+    blurred = true
+  }
+  // Clear the toast once user refocuses
+  const onFocus = () => {
+    blurred = false
+    if (!finishedWhileAway.length) return
+    api.ui.dismissToast()
+    finishedWhileAway.length = 0
+  }
+  api.renderer.on("blur", onBlur)
+  api.renderer.on("focus", onFocus)
+  api.lifecycle.onDispose(() => {
+    api.renderer.off("blur", onBlur)
+    api.renderer.off("focus", onFocus)
+  })
 
   api.event.on("question.asked", (event) => {
     if (questions.has(event.properties.id)) return
@@ -75,6 +98,15 @@ const tui: TuiPlugin = async (api) => {
 
     const session = api.state.session.get(sessionID)
     notify(api, sessionID, "Session done", session?.parentID ? "subagent_done" : "done")
+    // Only top-level sessions that finish while away get a toast, several collapse into one
+    if (!blurred || session?.parentID) return
+    finishedWhileAway.push(session?.title)
+    api.ui.toast({
+      variant: "success",
+      title: finishedWhileAway.length === 1 ? finishedWhileAway[0] : `${finishedWhileAway.length} sessions`,
+      message: "Session done",
+      duration: AWAY_TOAST_MS,
+    })
   })
 
   api.event.on("session.error", (event) => {
