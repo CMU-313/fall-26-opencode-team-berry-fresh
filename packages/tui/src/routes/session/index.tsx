@@ -52,6 +52,7 @@ import { getBookmarks, toggleBookmark } from "./bookmarks"
 import type { PromptInfo } from "../../component/prompt/history"
 import { DialogConfirm } from "../../ui/dialog-confirm"
 import { DialogTimeline } from "./dialog-timeline"
+import { DialogBookmarks } from "./dialog-bookmarks"
 import { DialogForkFromTimeline } from "./dialog-fork-from-timeline"
 import { DialogSessionRename } from "../../component/dialog-session-rename"
 import { Sidebar } from "./sidebar"
@@ -118,6 +119,7 @@ const sessionBindingCommands = [
   "session.share",
   "session.rename",
   "session.timeline",
+  "session.bookmarks",
   "session.fork",
   "session.compact",
   "session.unshare",
@@ -422,6 +424,11 @@ export function Session() {
     dialog.clear()
   }
 
+  const scrollToMessageID = (messageID: string) => {
+    const child = scroll.getChildren().find((child) => child.id === messageID)
+    if (child) scroll.scrollBy(child.y - scroll.y - 1)
+  }
+
   function toBottom() {
     setTimeout(() => {
       if (!scroll || scroll.isDestroyed) return
@@ -526,16 +533,22 @@ export function Session() {
       run: () => {
         dialog.replace(() => (
           <DialogTimeline
-            onMove={(messageID) => {
-              const child = scroll.getChildren().find((child) => {
-                return child.id === messageID
-              })
-              if (child) scroll.scrollBy(child.y - scroll.y - 1)
-            }}
+            onMove={scrollToMessageID}
             sessionID={route.sessionID}
             setPrompt={(promptInfo) => prompt?.set(promptInfo)}
           />
         ))
+      },
+    },
+    {
+      title: "Bookmarked prompts",
+      value: "session.bookmarks",
+      category: "Session",
+      slash: {
+        name: "bookmarks",
+      },
+      run: () => {
+        dialog.replace(() => <DialogBookmarks sessionID={route.sessionID} onSelect={scrollToMessageID} />)
       },
     },
     {
