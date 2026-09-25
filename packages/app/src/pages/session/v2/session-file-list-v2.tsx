@@ -5,11 +5,12 @@ import { TooltipV2 } from "@opencode-ai/ui/v2/tooltip-v2"
 import { useI18n } from "@opencode-ai/ui/context/i18n"
 import "@opencode-ai/ui/v2/file-tree-v2.css"
 import { getDirectory, getFilename } from "@opencode-ai/core/util/path"
-import { createEffect, createMemo, createSignal, For, Show } from "solid-js"
+import { createEffect, createMemo, createSignal, For, onCleanup, Show } from "solid-js"
 import { kindChange, kindLabel, type Kind } from "@/components/file-tree-v2"
 import { normalizePath } from "@/pages/session/v2/review-diff-kinds"
 import { createVirtualizer, defaultRangeExtractor } from "@tanstack/solid-virtual"
 import { virtualScrollElement } from "@/components/virtual-scroll-element"
+import { REVIEW_FILE_COPY_FEEDBACK_MS } from "@/pages/session/v2/review-file-copy"
 
 // Drives the highlight/selection of the flat search-result list from the filter
 // input's keyboard events.
@@ -52,7 +53,7 @@ export function SessionFileListV2(props: {
   optionID?: (path: string) => string
   onFileClick: (path: string) => void
   onFileDoubleClick?: (path: string) => void
-  onCopyPath?: (path: string) => void
+  onCopyPath?: (path: string) => Promise<boolean> | boolean
 }) {
   const i18n = useI18n()
   const active = () => normalizePath(props.active ?? "")
@@ -60,6 +61,19 @@ export function SessionFileListV2(props: {
   const normalized = createMemo(() => props.files.map(normalizePath))
   const [root, setRoot] = createSignal<HTMLDivElement>()
   const [focused, setFocused] = createSignal<string>()
+  const [copiedPath, setCopiedPath] = createSignal<string>()
+  let copiedPathTimer: ReturnType<typeof setTimeout> | undefined
+
+  onCleanup(() => {
+    if (copiedPathTimer) clearTimeout(copiedPathTimer)
+  })
+
+  const copyPath = async (path: string) => {
+    if (!(await props.onCopyPath?.(path))) return
+    setCopiedPath(path)
+    if (copiedPathTimer) clearTimeout(copiedPathTimer)
+    copiedPathTimer = setTimeout(() => setCopiedPath(undefined), REVIEW_FILE_COPY_FEEDBACK_MS)
+  }
   const virtualizer = createVirtualizer<HTMLDivElement, HTMLDivElement>({
     get count() {
       return props.files.length
@@ -170,12 +184,20 @@ export function SessionFileListV2(props: {
                           variant="ghost-muted"
                           size="small"
                           class="absolute end-1 top-1 !size-6 bg-v2-background-bg-base"
-                          title={i18n.t("session.header.open.copyPath")}
-                          aria-label={i18n.t("session.header.open.copyPath")}
-                          icon={<Icon name="copy" />}
+                          title={
+                            copiedPath() === path
+                              ? i18n.t("session.share.copy.copied")
+                              : i18n.t("session.header.open.copyPath")
+                          }
+                          aria-label={
+                            copiedPath() === path
+                              ? i18n.t("session.share.copy.copied")
+                              : i18n.t("session.header.open.copyPath")
+                          }
+                          icon={<Icon name={copiedPath() === path ? "check" : "copy"} />}
                           onClick={(event) => {
                             event.stopPropagation()
-                            props.onCopyPath?.(path)
+                            void copyPath(path)
                           }}
                         />
                       </TooltipV2>

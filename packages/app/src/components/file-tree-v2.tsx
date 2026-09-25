@@ -6,6 +6,7 @@ import {
   createMemo,
   createSignal,
   For,
+  onCleanup,
   Show,
   splitProps,
   type ComponentProps,
@@ -27,6 +28,7 @@ import {
   type FileTreeV2Node,
 } from "@/components/file-tree-v2-model"
 import { virtualScrollElement } from "@/components/virtual-scroll-element"
+import { REVIEW_FILE_COPY_FEEDBACK_MS } from "@/pages/session/v2/review-file-copy"
 
 export type { Kind } from "@/components/file-tree"
 
@@ -133,7 +135,7 @@ export default function FileTreeV2(props: {
   draggable?: boolean
   onFileClick?: (file: FileNode) => void
   onFileDoubleClick?: (file: FileNode) => void
-  onCopyPath?: (path: string) => void
+  onCopyPath?: (path: string) => Promise<boolean> | boolean
 }) {
   const file = useFile()
   const i18n = useI18n()
@@ -148,6 +150,19 @@ export default function FileTreeV2(props: {
   })
   const [root, setRoot] = createSignal<HTMLDivElement>()
   const [focused, setFocused] = createSignal<string>()
+  const [copiedPath, setCopiedPath] = createSignal<string>()
+  let copiedPathTimer: ReturnType<typeof setTimeout> | undefined
+
+  onCleanup(() => {
+    if (copiedPathTimer) clearTimeout(copiedPathTimer)
+  })
+
+  const copyPath = async (path: string) => {
+    if (!(await props.onCopyPath?.(path))) return
+    setCopiedPath(path)
+    if (copiedPathTimer) clearTimeout(copiedPathTimer)
+    copiedPathTimer = setTimeout(() => setCopiedPath(undefined), REVIEW_FILE_COPY_FEEDBACK_MS)
+  }
   const virtualizer = createVirtualizer<HTMLDivElement, HTMLDivElement>({
     get count() {
       return rows().length
@@ -276,12 +291,24 @@ export default function FileTreeV2(props: {
                                 variant="ghost-muted"
                                 size="small"
                                 class="absolute end-1 top-1 !size-6 bg-v2-background-bg-base"
-                                title={i18n.t("session.header.open.copyPath")}
-                                aria-label={i18n.t("session.header.open.copyPath")}
-                                icon={<Icon name="copy" />}
+                                title={
+                                  copiedPath() === row().node.originalPath
+                                    ? i18n.t("session.share.copy.copied")
+                                    : i18n.t("session.header.open.copyPath")
+                                }
+                                aria-label={
+                                  copiedPath() === row().node.originalPath
+                                    ? i18n.t("session.share.copy.copied")
+                                    : i18n.t("session.header.open.copyPath")
+                                }
+                                icon={
+                                  <Icon
+                                    name={copiedPath() === row().node.originalPath ? "check" : "copy"}
+                                  />
+                                }
                                 onClick={(event) => {
                                   event.stopPropagation()
-                                  props.onCopyPath?.(row().node.originalPath)
+                                  void copyPath(row().node.originalPath)
                                 }}
                               />
                             </TooltipV2>

@@ -19,6 +19,7 @@ import type {
   SessionReviewFocus,
   SessionReviewLineComment,
 } from "@opencode-ai/session-ui/session-review"
+import { copyReviewFilePath } from "@/pages/session/v2/review-file-copy"
 import FileTreeV2 from "@/components/file-tree-v2"
 import { useLanguage } from "@/context/language"
 import { useSDK } from "@/context/sdk"
@@ -111,22 +112,32 @@ export function ReviewPanelV2(props: ReviewPanelV2Props) {
         return undefined
       })
 
-  const copyPath = (path: string) => {
-    void navigator.clipboard.writeText(path).then(
-      () => {
+  const copyPath = async (path: string) => {
+    const clipboard = typeof navigator === "undefined" ? undefined : navigator.clipboard
+    if (!clipboard?.writeText) {
+      showToast({
+        variant: "error",
+        title: language.t("toast.session.share.copyFailed.title"),
+      })
+      return false
+    }
+
+    return copyReviewFilePath(path, {
+      writeText: (value) => clipboard.writeText(value),
+      onSuccess: (value) => {
         showToast({
           variant: "success",
           title: language.t("session.share.copy.copied"),
-          description: path,
+          description: value,
         })
       },
-      () => {
+      onFailure: () => {
         showToast({
           variant: "error",
           title: language.t("toast.session.share.copyFailed.title"),
         })
       },
-    )
+    })
   }
 
   return (
@@ -199,7 +210,7 @@ function ReviewPanelV2Sidebar(props: {
   searching: () => boolean
   kinds: () => ReturnType<typeof reviewDiffKinds>
   activeDiff: () => string | undefined
-  onCopyPath: (path: string) => void
+  onCopyPath: (path: string) => Promise<boolean> | boolean
 }) {
   const language = useLanguage()
   const [explicitHighlight, setExplicitHighlight] = createSignal<string | undefined>()
