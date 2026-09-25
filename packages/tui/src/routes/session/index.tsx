@@ -548,7 +548,12 @@ export function Session() {
         name: "bookmarks",
       },
       run: () => {
-        dialog.replace(() => <DialogBookmarks sessionID={route.sessionID} onSelect={scrollToMessageID} />)
+        dialog.replace(() => (
+          <DialogBookmarks
+            sessionID={route.sessionID}
+            onSelect={(messageID) => requestAnimationFrame(() => scrollToMessageID(messageID))}
+          />
+        ))
       },
     },
     {
