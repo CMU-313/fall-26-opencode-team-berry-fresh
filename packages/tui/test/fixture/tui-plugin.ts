@@ -8,9 +8,6 @@ type Opts = {
   attention?: Partial<TuiPluginApi["attention"]>
   event?: TuiPluginApi["event"]
   state?: { session?: Partial<TuiPluginApi["state"]["session"]> }
-  renderer?: TuiPluginApi["renderer"]
-  toast?: TuiPluginApi["ui"]["toast"]
-  dismissToast?: TuiPluginApi["ui"]["dismissToast"]
 }
 
 export function createTuiPluginApi(opts: Opts = {}) {
@@ -22,9 +19,6 @@ export function createTuiPluginApi(opts: Opts = {}) {
     client: opts.client,
     event: opts.event,
     keymap: opts.keymap,
-    // Support for plugins that register focus listeners or toasts
-    lifecycle: { onDispose: () => () => {} },
-    renderer: opts.renderer ?? { on() {}, off() {} },
     kv: {
       get(name: string, fallback?: unknown) {
         return values.has(name) ? values.get(name) : fallback
@@ -37,6 +31,6 @@ export function createTuiPluginApi(opts: Opts = {}) {
     state: { session: { get: () => undefined, ...opts.state?.session } },
     theme: { current: new Proxy({}, { get: () => color }) },
     tuiConfig: createTuiResolvedConfig(),
-    ui: { dialog, toast: opts.toast ?? (() => {}), dismissToast: opts.dismissToast ?? (() => {}) },
+    ui: { dialog },
   } as unknown as TuiPluginApi
 }
