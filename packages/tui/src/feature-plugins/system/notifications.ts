@@ -32,6 +32,22 @@ const tui: TuiPlugin = async (api) => {
   const questions = new Set<string>()
   const permissions = new Set<string>()
 
+  // Track terminal focus so toasts only show when the user is away
+  let blurred = false
+  const onBlur = () => {
+    blurred = true
+  }
+  const onFocus = () => {
+    blurred = false
+  }
+  api.renderer.on("blur", onBlur)
+  api.renderer.on("focus", onFocus)
+  // Remove focus listeners when the plugin is disposed
+  api.lifecycle.onDispose(() => {
+    api.renderer.off("blur", onBlur)
+    api.renderer.off("focus", onFocus)
+  })
+
   api.event.on("question.asked", (event) => {
     if (questions.has(event.properties.id)) return
     questions.add(event.properties.id)
@@ -75,6 +91,9 @@ const tui: TuiPlugin = async (api) => {
 
     const session = api.state.session.get(sessionID)
     notify(api, sessionID, "Session done", session?.parentID ? "subagent_done" : "done")
+    // Only toast for top-level sessions that finish while the terminal is unfocused
+    if (!blurred || session?.parentID) return
+    api.ui.toast({ variant: "success", title: session?.title, message: "Session done", duration: 60_000 })
   })
 
   api.event.on("session.error", (event) => {

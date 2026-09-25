@@ -7,6 +7,8 @@ type Opts = {
   keymap?: TuiPluginApi["keymap"]
   attention?: Partial<TuiPluginApi["attention"]>
   event?: TuiPluginApi["event"]
+  renderer?: TuiPluginApi["renderer"]
+  toast?: TuiPluginApi["ui"]["toast"]
   state?: { session?: Partial<TuiPluginApi["state"]["session"]> }
 }
 
@@ -19,6 +21,8 @@ export function createTuiPluginApi(opts: Opts = {}) {
     client: opts.client,
     event: opts.event,
     keymap: opts.keymap,
+    lifecycle: { onDispose: () => () => {} },
+    renderer: opts.renderer ?? { on() {}, off() {} },
     kv: {
       get(name: string, fallback?: unknown) {
         return values.has(name) ? values.get(name) : fallback
@@ -31,6 +35,6 @@ export function createTuiPluginApi(opts: Opts = {}) {
     state: { session: { get: () => undefined, ...opts.state?.session } },
     theme: { current: new Proxy({}, { get: () => color }) },
     tuiConfig: createTuiResolvedConfig(),
-    ui: { dialog },
+    ui: { dialog, toast: opts.toast ?? (() => {}) },
   } as unknown as TuiPluginApi
 }

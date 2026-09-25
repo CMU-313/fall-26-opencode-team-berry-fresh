@@ -35,6 +35,7 @@ export function Toast() {
           borderColor={theme[current().variant]}
           border={["left", "right"]}
           customBorderChars={SplitBorder.customBorderChars}
+          onMouseUp={() => toast.hide()}
         >
           <Show when={current().title}>
             <text attributes={TextAttributes.BOLD} marginBottom={1} fg={theme.text}>
@@ -43,6 +44,10 @@ export function Toast() {
           </Show>
           <text fg={theme.text} wrapMode="word" width="100%">
             {current().message}
+          </text>
+          {/* Message that the toast can be dismissed by clicking it */}
+          <text fg={theme.textMuted} marginTop={1}>
+            Click to dismiss.
           </text>
         </box>
       )}
@@ -65,6 +70,12 @@ function init() {
       timeoutHandle = setTimeout(() => {
         setStore("currentToast", null)
       }, toastOptions.duration).unref()
+    },
+    hide() {
+      // Cancel the pending auto-dismiss timer and clear the toast immediately
+      if (timeoutHandle) clearTimeout(timeoutHandle)
+      timeoutHandle = null
+      setStore("currentToast", null)
     },
     error: (err: any) => {
       if (err instanceof Error)
