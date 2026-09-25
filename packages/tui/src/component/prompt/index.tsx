@@ -57,6 +57,7 @@ import { usePromptWorkspace } from "./workspace"
 import { usePromptMove } from "./move"
 import { readLocalAttachment } from "./local-attachment"
 import { useLocation } from "../../context/location"
+import { buildCommentPrompt } from "./comment"
 
 registerOpencodeSpinner()
 
@@ -1207,30 +1208,14 @@ export function Prompt(props: PromptProps) {
   
       if (!code) {
         toast.show({
-          title: "Clipboard is empty",
+          title: "No code pasted",
           message: "Paste the code you want to comment.",
           variant: "warning",
         })
         return
       }
   
-      input.setText(
-        [
-          "Add an appropriate comment for the code below.",
-          "",
-          "Find the exact occurrence of this code in the current workspace.",
-          "Write the comment directly above the matching code.",
-          "Do not modify the code itself.",
-          "Use the commenting convention appropriate for the file's language.",
-          "Keep the comment concise and useful.",
-          "If the code appears in multiple files, determine the most likely intended file from the code and surrounding context.",
-          "",
-          "Selected code:",
-          "```",
-          code,
-          "```",
-        ].join("\n"),
-      )
+      input.setText(buildCommentPrompt(code))
   
       setStore("prompt", {
         input: input.plainText,
