@@ -1,16 +1,22 @@
 import type { Event } from "@opencode-ai/sdk/v2"
 import type { TuiAttentionSoundName, TuiPlugin, TuiPluginApi } from "@opencode-ai/plugin/tui"
 import type { BuiltinTuiPlugin } from "../builtins"
+import { isDefaultTitle } from "../../util/session"
 
 const id = "internal:notifications"
 
 type SessionError = Extract<Event, { type: "session.error" }>["properties"]["error"]
 
+// Untitled sessions carry a long timestamped placeholder title, which is noise in a notification
+function displayTitle(title: string | undefined) {
+  return title && !isDefaultTitle(title) ? title : undefined
+}
+
 function notify(api: TuiPluginApi, sessionID: string | undefined, message: string, sound: TuiAttentionSoundName) {
   const session = sessionID ? api.state.session.get(sessionID) : undefined
   const isSubagent = session?.parentID !== undefined
   void api.attention.notify({
-    title: session?.title,
+    title: displayTitle(session?.title) ?? "OpenCode",
     message,
     notification: isSubagent ? false : { when: "blurred" },
     sound: { name: sound, when: "always" },
@@ -90,10 +96,16 @@ const tui: TuiPlugin = async (api) => {
     }
 
     const session = api.state.session.get(sessionID)
-    notify(api, sessionID, "Session done", session?.parentID ? "subagent_done" : "done")
+    notify(api, sessionID, "OpenCode has finished responding", session?.parentID ? "subagent_done" : "done")
     // Only toast for top-level sessions that finish while the terminal is unfocused
     if (!blurred || session?.parentID) return
-    api.ui.toast({ variant: "success", title: session?.title, message: "Session done", duration: 60_000 })
+    const time = new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
+    api.ui.toast({
+      variant: "success",
+      title: displayTitle(session?.title),
+      message: `OpenCode has finished responding\nFinished at ${time}`,
+      duration: 300_000,
+    })
   })
 
   api.event.on("session.error", (event) => {

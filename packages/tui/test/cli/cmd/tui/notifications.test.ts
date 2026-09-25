@@ -24,6 +24,7 @@ async function setup() {
     subagent: session("subagent", "Subagent session", "session"),
     abort: session("abort", "Abort session"),
     timeout: session("timeout", "Timeout session"),
+    untitled: session("untitled", "New session - 2026-09-25T00:24:23.123Z"),
   }
 
   await Notifications.tui(
@@ -168,7 +169,7 @@ describe("internal notifications TUI plugin", () => {
     expect(harness.notifications).toEqual([
       {
         title: "Demo session",
-        message: "Session done",
+        message: "OpenCode has finished responding",
         notification: { when: "blurred" },
         sound: { name: "done", when: "always" },
       },
@@ -192,7 +193,22 @@ describe("internal notifications TUI plugin", () => {
     harness.renderer("focus")
     run("session")
 
-    expect(harness.toasts).toEqual([{ variant: "success", title: "Demo session", message: "Session done", duration: 60_000 }])
+    expect(harness.toasts).toEqual([
+      {
+        variant: "success",
+        title: "Demo session",
+        message: expect.stringMatching(/^OpenCode has finished responding\nFinished at .+/),
+        duration: 300_000,
+      },
+    ])
+  })
+
+  test("falls back to an OpenCode title for untitled sessions", async () => {
+    const harness = await setup()
+
+    harness.emit({ id: "event-1", type: "question.asked", properties: question("question-1", "untitled") })
+
+    expect(harness.notifications).toEqual([{ ...questionNotification, title: "OpenCode" }])
   })
 
   test("uses sound-only notifications and subagent_done sound for subagent sessions", async () => {
@@ -219,7 +235,7 @@ describe("internal notifications TUI plugin", () => {
       },
       {
         title: "Subagent session",
-        message: "Session done",
+        message: "OpenCode has finished responding",
         notification: false,
         sound: { name: "subagent_done", when: "always" },
       },
