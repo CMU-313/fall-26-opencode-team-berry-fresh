@@ -1,4 +1,4 @@
-import type { Event } from "@opencode-ai/sdk/v2"
+import type { AssistantMessage, Event } from "@opencode-ai/sdk/v2"
 import type { TuiAttentionSoundName, TuiPlugin, TuiPluginApi } from "@opencode-ai/plugin/tui"
 import type { BuiltinTuiPlugin } from "../builtins"
 import { isDefaultTitle } from "../../util/session"
@@ -21,6 +21,27 @@ function notify(api: TuiPluginApi, sessionID: string | undefined, message: strin
     notification: isSubagent ? false : { when: "blurred" },
     sound: { name: sound, when: "always" },
   })
+}
+
+// Compute time and tokens for the latest prompt only
+function turnSummary(api: TuiPluginApi, sessionID: string) {
+  const messages = api.state.session.messages(sessionID)
+  const prompt = messages.findLast((item) => item.role === "user")
+  const replies = messages.filter(
+    (item): item is AssistantMessage => item.role === "assistant" && item.parentID === prompt?.id,
+  )
+  const end = replies.findLast((item) => item.time.completed)?.time.completed
+  const tokens = replies.reduce((sum, item) => sum + item.tokens.output + item.tokens.reasoning, 0)
+  return [
+    ...(prompt && end !== undefined ? [`Took ${formatDuration(end - prompt.time.created)}`] : []),
+    ...(tokens > 0 ? [`Tokens used: ${tokens.toLocaleString()}`] : []),
+  ]
+}
+
+function formatDuration(ms: number) {
+  const seconds = Math.max(0, Math.round(ms / 1000))
+  if (seconds < 60) return `${seconds}s`
+  return `${Math.floor(seconds / 60)}m ${seconds % 60}s`
 }
 
 function sessionErrorMessage(error: SessionError) {
@@ -103,7 +124,7 @@ const tui: TuiPlugin = async (api) => {
     api.ui.toast({
       variant: "success",
       title: displayTitle(session?.title),
-      message: `OpenCode has finished responding\nFinished at ${time}`,
+      message: [`OpenCode has finished responding`, `Finished at ${time}`, ...turnSummary(api, sessionID)].join("\n"),
       duration: 300_000,
     })
   })
