@@ -10,6 +10,8 @@ export type ToastOptions = {
   variant: "info" | "success" | "warning" | "error"
   duration: number
 }
+const HISTORY_LIMIT = 5
+export type ToastHistoryItem = ToastOptions & { time: number }
 type ToastInput = Omit<ToastOptions, "duration"> & { duration?: number }
 
 export function Toast() {
@@ -35,6 +37,7 @@ export function Toast() {
           borderColor={theme[current().variant]}
           border={["left", "right"]}
           customBorderChars={SplitBorder.customBorderChars}
+          onMouseUp={() => toast.hide()}
         >
           <Show when={current().title}>
             <text attributes={TextAttributes.BOLD} marginBottom={1} fg={theme.text}>
@@ -43,6 +46,10 @@ export function Toast() {
           </Show>
           <text fg={theme.text} wrapMode="word" width="100%">
             {current().message}
+          </text>
+          {/* Message that the toast can be dismissed by clicking it */}
+          <text fg={theme.textMuted} marginTop={1}>
+            Click to dismiss.
           </text>
         </box>
       )}
@@ -53,6 +60,8 @@ export function Toast() {
 function init() {
   const [store, setStore] = createStore({
     currentToast: null as ToastOptions | null,
+    // Most recent first, so toasts stay reviewable after they are dismissed or time out
+    history: [] as ToastHistoryItem[],
   })
 
   let timeoutHandle: NodeJS.Timeout | null = null
@@ -61,10 +70,17 @@ function init() {
     show(options: ToastInput) {
       const toastOptions = { ...options, duration: options.duration ?? 5000 }
       setStore("currentToast", toastOptions)
+      setStore("history", (history) => [{ ...toastOptions, time: Date.now() }, ...history].slice(0, HISTORY_LIMIT))
       if (timeoutHandle) clearTimeout(timeoutHandle)
       timeoutHandle = setTimeout(() => {
         setStore("currentToast", null)
       }, toastOptions.duration).unref()
+    },
+    hide() {
+      // Cancel the pending auto-dismiss timer and clear the toast immediately
+      if (timeoutHandle) clearTimeout(timeoutHandle)
+      timeoutHandle = null
+      setStore("currentToast", null)
     },
     error: (err: any) => {
       if (err instanceof Error)
@@ -76,6 +92,9 @@ function init() {
         variant: "error",
         message: "An unknown error has occurred",
       })
+    },
+    get history(): readonly ToastHistoryItem[] {
+      return store.history
     },
     get currentToast(): ToastOptions | null {
       return store.currentToast
