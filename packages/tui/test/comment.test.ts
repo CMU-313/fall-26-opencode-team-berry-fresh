@@ -13,17 +13,13 @@ describe("buildCommentPrompt", () => {
   test("asks the agent to find the exact code", () => {
     const prompt = buildCommentPrompt("const foo = 42")
 
-    expect(prompt).toContain(
-      "Find the exact occurrence of this code in the current workspace.",
-    )
+    expect(prompt).toContain("Find the exact occurrence of this code in the current workspace.")
   })
 
   test("asks the agent to put the comment above the code", () => {
     const prompt = buildCommentPrompt("const foo = 42")
 
-    expect(prompt).toContain(
-      "Write the comment directly above the matching code.",
-    )
+    expect(prompt).toContain("Write the comment directly above the matching code.")
   })
 
   test("tells the agent not to modify the code", () => {
@@ -40,5 +36,26 @@ describe("buildCommentPrompt", () => {
     const prompt = buildCommentPrompt(code)
 
     expect(prompt).toContain(code)
+  })
+})
+
+describe("comment search context", () => {
+  test("includes the workspace and editor hint", () => {
+    const prompt = buildCommentPrompt("return total", "/workspace/project", "/workspace/project/example.py")
+
+    expect(prompt).toContain('Workspace root: "/workspace/project"')
+    expect(prompt).toContain('Editor file hint: "/workspace/project/example.py"')
+  })
+
+  test("preserves indentation and trailing whitespace", () => {
+    const code = "    return total  \n"
+
+    expect(buildCommentPrompt(code)).toContain("```\n" + code + "\n```")
+  })
+
+  test("keeps embedded code fences inside the selected code", () => {
+    const code = 'const markdown = "```python"'
+
+    expect(buildCommentPrompt(code)).toContain("````\n" + code + "\n````")
   })
 })

@@ -1204,9 +1204,9 @@ export function Prompt(props: PromptProps) {
       commentMode = false
   
       const normalizedText = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n")
-      const code = normalizedText.trim()
+      const code = normalizedText
   
-      if (!code) {
+      if (!code.trim()) {
         toast.show({
           title: "No code pasted",
           message: "Paste the code you want to comment.",
@@ -1215,7 +1215,20 @@ export function Prompt(props: PromptProps) {
         return
       }
   
-      input.setText(buildCommentPrompt(code))
+      input.extmarks.clear()
+      setStore("extmarkToPartIndex", new Map())
+      setStore("mode", "normal")
+      input.setText(
+        buildCommentPrompt(
+          code,
+          // The launch directory may be a package inside the repository.
+          (project.instance.path().worktree === "/" ? undefined : project.instance.path().worktree) ||
+            location()?.directory ||
+            project.instance.directory() ||
+            paths.cwd,
+          editorContext()?.filePath,
+        ),
+      )
   
       setStore("prompt", {
         input: input.plainText,
