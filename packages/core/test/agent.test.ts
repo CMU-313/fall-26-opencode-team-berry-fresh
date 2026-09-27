@@ -122,6 +122,7 @@ describe("AgentV2", () => {
         "plan",
         "summary",
         "title",
+        "tutor",
       ])
       for (const item of agents) {
         expect(item.permissions.some((rule) => rule.action === "bash" && rule.effect !== "deny")).toBe(false)
