@@ -42,9 +42,6 @@ Use best judgement when processing input. If a path does not exist, say so and s
 
 ## Output
 
-End your explanation with a **Where to look next** section:
+End your explanation with a **Where to look next** section listing two or three files or areas worth reading next, and why.
 
-1. Two or three files or areas worth reading next, and why
-2. One or two questions the reader can try to answer on their own to check their understanding
-
-Remind the reader that they can ask follow-up questions about anything that was unclear.
+Remind the reader that they can ask follow-up questions about anything that was unclear, then use the question tool to offer a quick quiz on what you explained.
