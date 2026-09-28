@@ -27,7 +27,7 @@ Primary agents are the main assistants you interact with directly. You can cycle
 You can use the **Tab** key to switch between primary agents during a session.
 :::
 
-OpenCode comes with two built-in primary agents, **Build** and **Plan**. We'll
+OpenCode comes with three built-in primary agents, **Build**, **Plan**, and **Tutor**. We'll
 look at these below.
 
 ---
@@ -42,7 +42,7 @@ OpenCode comes with three built-in subagents, **General**, **Explore**, and **Sc
 
 ## Built-in
 
-OpenCode comes with two built-in primary agents and three built-in subagents.
+OpenCode comes with three built-in primary agents and three built-in subagents.
 
 ---
 
@@ -65,6 +65,18 @@ By default, all of the following are set to `ask`:
 - `bash`: All bash commands
 
 This agent is useful when you want the LLM to analyze code, suggest changes, or create plans without making any actual modifications to your codebase.
+
+---
+
+### Use tutor
+
+_Mode_: `primary`
+
+A learning mode for people who are new to a codebase. Tutor explains code in a beginner-friendly way: big picture first, jargon defined, and references to real `file:line` locations. It can only read and search code, and it can hand broad searches to the Explore subagent. File edits and bash commands are denied, so asking it questions never changes your project.
+
+After an explanation, Tutor offers a quick quiz. If you accept, it asks one to three multiple-choice questions about the code, tells you whether each answer is right, and re-explains anything you missed.
+
+The [`/explain`](/docs/tui#explain) command runs on Tutor and switches your session to it, so follow-up questions stay in learning mode. Press **Tab** to switch back to Build.
 
 ---
 

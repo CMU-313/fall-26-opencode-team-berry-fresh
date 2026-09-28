@@ -123,6 +123,8 @@ Open external editor for composing messages. Uses the editor set in your `EDITOR
 
 Explain code in a beginner-friendly way. Pass one or more files or directories to explain them, or leave it empty to get an overview of the whole project.
 
+`/explain` runs on the read-only [Tutor](/docs/agents#use-tutor) agent and switches your session to it, so follow-up questions stay in learning mode. At the end, Tutor offers a quick multiple-choice quiz to check your understanding.
+
 ```bash frame="none"
 /explain
 /explain src/index.ts

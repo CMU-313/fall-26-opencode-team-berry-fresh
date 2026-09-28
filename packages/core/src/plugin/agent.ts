@@ -7,6 +7,7 @@ import { AgentV2 } from "../agent"
 import { Global } from "../global"
 import { Location } from "../location"
 import { PermissionV2 } from "../permission"
+import PROMPT_TUTOR from "./agent/tutor.txt"
 
 const TRUNCATION_GLOB = path.join(Global.Path.data, "tool-output", "*")
 const BUILD_SYSTEM =
@@ -150,6 +151,27 @@ export const Plugin = define({
               effect: "allow",
             },
           ]),
+        )
+      })
+
+      draft.update(AgentV2.ID.make("tutor"), (item) => {
+        item.description = "Learning mode. Explains code for newcomers without changing files, and can quiz you."
+        item.system = PROMPT_TUTOR
+        item.mode = "primary"
+        item.permissions.push(
+          ...PermissionV2.merge(
+            defaults,
+            [
+              { action: "*", resource: "*", effect: "deny" },
+              { action: "read", resource: "*", effect: "allow" },
+              { action: "grep", resource: "*", effect: "allow" },
+              { action: "glob", resource: "*", effect: "allow" },
+              { action: "list", resource: "*", effect: "allow" },
+              { action: "question", resource: "*", effect: "allow" },
+              { action: "task", resource: "explore", effect: "allow" },
+            ],
+            readonlyExternalDirectory,
+          ),
         )
       })
 

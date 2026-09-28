@@ -24,6 +24,7 @@ export const Plugin = define({
       draft.update("explain", (command) => {
         command.template = PROMPT_EXPLAIN.replace("${path}", location.project.directory)
         command.description = "explain code [files|dirs], defaults to whole project"
+        command.agent = "tutor"
       })
     })
   }),
