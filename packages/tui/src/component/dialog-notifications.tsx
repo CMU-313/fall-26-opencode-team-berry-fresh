@@ -4,7 +4,7 @@ import { useTerminalDimensions } from "@opentui/solid"
 import { For, Show } from "solid-js"
 import { useTheme } from "../context/theme"
 import { useDialog } from "../ui/dialog"
-import { useToast } from "../ui/toast"
+import { HISTORY_LIMIT, useToast } from "../ui/toast"
 
 export function DialogNotifications() {
   const { theme } = useTheme()
@@ -24,6 +24,7 @@ export function DialogNotifications() {
           esc
         </text>
       </box>
+      <text fg={theme.textMuted}>Showing the last {HISTORY_LIMIT} notifications</text>
       <Show
         when={toast.history.length > 0}
         fallback={<text fg={theme.textMuted}>Nothing happened while you were away</text>}

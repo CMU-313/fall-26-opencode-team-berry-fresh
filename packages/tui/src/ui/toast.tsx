@@ -10,7 +10,7 @@ export type ToastOptions = {
   variant: "info" | "success" | "warning" | "error"
   duration: number
 }
-const HISTORY_LIMIT = 5
+export const HISTORY_LIMIT = 5
 export type ToastHistoryItem = ToastOptions & { time: number }
 type ToastInput = Omit<ToastOptions, "duration"> & { duration?: number }
 
