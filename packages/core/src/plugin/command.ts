@@ -5,6 +5,7 @@ import { Effect } from "effect"
 import { Location } from "../location"
 import PROMPT_INITIALIZE from "./command/initialize.txt"
 import PROMPT_REVIEW from "./command/review.txt"
+import PROMPT_EXPLAIN from "./command/explain.txt"
 
 export const Plugin = define({
   id: "command",
@@ -19,6 +20,10 @@ export const Plugin = define({
         command.template = PROMPT_REVIEW.replace("${path}", location.project.directory)
         command.description = "review changes [commit|branch|pr], defaults to uncommitted"
         command.subtask = true
+      })
+      draft.update("explain", (command) => {
+        command.template = PROMPT_EXPLAIN.replace("${path}", location.project.directory)
+        command.description = "explain code [files|dirs], defaults to whole project"
       })
     })
   }),
