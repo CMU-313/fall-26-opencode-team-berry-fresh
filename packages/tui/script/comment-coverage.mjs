@@ -7,8 +7,8 @@ const result = await Bun.spawn(
   [
     "bun",
     "test",
-    "test/comment.test.ts",
-    "test/comment-output.test.ts",
+    "test/comment-tests/comment.test.ts",
+    "test/comment-tests/comment-output.test.ts",
     "test/app-lifecycle.test.tsx",
     "--coverage",
     "--coverage-reporter=lcov",

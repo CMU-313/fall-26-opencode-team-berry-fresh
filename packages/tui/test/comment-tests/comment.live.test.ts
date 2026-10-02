@@ -14,7 +14,7 @@ if (enabled && (!url || !model?.includes("/"))) {
 
 // Exercise OpenCode's actual model and editing tools, not a replacement response.
 // The server must run locally with access to these temporary files and configured credentials.
-test.skipIf(!enabled).each(commentExamples)("live /comment generates a descriptive $language comment", async (example) => {
+test.skipIf(!enabled).each([...commentExamples])("live /comment generates a descriptive $language comment", async (example) => {
   await using workspace = await tmpdir()
   const file = path.join(workspace.path, example.file)
   await Bun.write(file, example.code)

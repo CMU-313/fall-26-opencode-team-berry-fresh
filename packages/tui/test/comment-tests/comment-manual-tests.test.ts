@@ -9,7 +9,7 @@ Manual /comment checks:
    describes its actual behavior, and leaves the function and other examples unchanged.
 5. Repeat with the other functions. Invoke /comment and paste whitespace to check
    that "No code pasted" appears without changing this file.
-6. Run `bun test test/comment-manual-tests.test.ts` from packages/tui after edits.
+6. Run `bun test test/comment-tests/comment-manual-tests.test.ts` from packages/tui after edits.
    These tests check function behavior; generated comment quality is checked manually.
 */
 
