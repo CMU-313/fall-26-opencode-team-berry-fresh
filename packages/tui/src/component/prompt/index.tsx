@@ -1469,7 +1469,7 @@ export function Prompt(props: PromptProps) {
 
                 // Windows Terminal <1.25 can surface image-only clipboard as an
                 // empty bracketed paste. Windows Terminal 1.25+ does not.
-                if (!pastedContent) {
+                if (!pastedContent && !commentMode) {
                   keymap.dispatchCommand("prompt.paste")
                   return
                 }
