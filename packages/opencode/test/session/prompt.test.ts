@@ -1816,6 +1816,33 @@ unix(
   30_000,
 )
 
+it.instance(
+  "/explain sends the explain prompt for a fixture file to the tutor agent",
+  () =>
+    Effect.gen(function* () {
+      const { dir, llm } = yield* useServerConfig(providerCfg)
+      yield* writeText(path.join(dir, "fixture", "greet.ts"), 'export const greet = (name: string) => `hi ${name}`\n')
+      const { prompt, chat } = yield* boot()
+      yield* llm.text("greet.ts exports a greet function.")
+
+      const result = yield* prompt.command({
+        sessionID: chat.id,
+        command: "explain",
+        arguments: "fixture/greet.ts",
+      })
+
+      expect(result.info.role).toBe("assistant")
+      if (result.info.role === "assistant") expect(result.info.agent).toBe("tutor")
+      expect(result.parts.some((part) => part.type === "text" && part.text.includes("greet function"))).toBe(true)
+      const messages = JSON.stringify((yield* llm.inputs).at(-1)?.messages)
+      expect(messages).toContain("patient mentor")
+      expect(messages).toContain("Input: fixture/greet.ts")
+      expect(messages).toContain(`The project root is \`${dir}\``)
+    }),
+  { git: true },
+  30_000,
+)
+
 unixNoLLMServer(
   "cancel interrupts shell and resolves cleanly",
   () =>
