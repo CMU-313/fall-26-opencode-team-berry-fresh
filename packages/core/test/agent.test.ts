@@ -3,6 +3,7 @@ import { Effect, Exit, Scope } from "effect"
 import { AgentV2 } from "@opencode-ai/core/agent"
 import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { Location } from "@opencode-ai/core/location"
+import { PermissionV2 } from "@opencode-ai/core/permission"
 import { AgentPlugin } from "@opencode-ai/core/plugin/agent"
 import { AbsolutePath } from "@opencode-ai/core/schema"
 import { location } from "./fixture/location"
@@ -127,6 +128,32 @@ describe("AgentV2", () => {
       for (const item of agents) {
         expect(item.permissions.some((rule) => rule.action === "bash" && rule.effect !== "deny")).toBe(false)
       }
+    }),
+  )
+
+  it.effect("registers tutor as a read-only primary agent", () =>
+    Effect.gen(function* () {
+      const agent = yield* AgentV2.Service
+      yield* AgentPlugin.Plugin.effect(
+        host({
+          agent: agentHost(agent),
+        }),
+      ).pipe(
+        Effect.provideService(
+          Location.Service,
+          Location.Service.of(location({ directory: AbsolutePath.make("/project") })),
+        ),
+      )
+
+      const tutor = yield* agent.get(AgentV2.ID.make("tutor"))
+      expect(tutor).toMatchObject({ mode: "primary" })
+      expect(tutor?.system).toContain("quiz")
+      const effect = (action: string, resource = "*") =>
+        PermissionV2.evaluate(action, resource, tutor?.permissions ?? []).effect
+      for (const action of ["read", "grep", "glob", "list", "question"]) expect(effect(action)).toBe("allow")
+      for (const action of ["edit", "write", "bash", "webfetch"]) expect(effect(action)).toBe("deny")
+      expect(effect("task", "explore")).toBe("allow")
+      expect(effect("task", "general")).toBe("deny")
     }),
   )
 })
