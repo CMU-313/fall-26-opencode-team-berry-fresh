@@ -9,6 +9,7 @@ import { MCP } from "../mcp"
 import { Skill } from "../skill"
 import PROMPT_INITIALIZE from "./template/initialize.txt"
 import PROMPT_REVIEW from "./template/review.txt"
+import PROMPT_EXPLAIN from "./template/explain.txt"
 import { LegacyEvent } from "@opencode-ai/schema/legacy-event"
 
 type State = {
@@ -46,6 +47,7 @@ export function hints(template: string) {
 export const Default = {
   INIT: "init",
   REVIEW: "review",
+  EXPLAIN: "explain",
 } as const
 
 export interface Interface {
@@ -85,6 +87,15 @@ const layer = Layer.effect(
         },
         subtask: true,
         hints: hints(PROMPT_REVIEW),
+      }
+      commands[Default.EXPLAIN] = {
+        name: Default.EXPLAIN,
+        description: "explain code [files|dirs], defaults to whole project",
+        source: "command",
+        get template() {
+          return PROMPT_EXPLAIN.replace("${path}", ctx.worktree)
+        },
+        hints: hints(PROMPT_EXPLAIN),
       }
 
       for (const [name, command] of Object.entries(cfg.command ?? {})) {
