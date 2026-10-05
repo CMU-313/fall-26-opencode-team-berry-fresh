@@ -47,3 +47,52 @@ The following test files contain my automated tests:
 All 8 automated tests pass. Using Bun's coverage report, I verified that `review-file-copy.ts` and `review-file-copy-feedback.ts`, which contain the main logic for this feature, both have 100% function and line coverage.
 
 I also manually tested the feature in both the normal and filtered changed-file views to verify that the correct path is copied and the expected checkmark and confirmation toast appear.
+
+### Add a Code Comment with /comment Slash Command
+#### Author: Sanjitha Govindan (sanjithg)
+
+**The Feature:** The `/comment` slash command asks OpenCode to add a concise, useful comment above a selected code snippet in your workspace. OpenCode searches for the exact snippet, checks the surrounding code, and is instructed to use the file's language-specific comment syntax while preserving the code itself. This uses the configured model, so the wording of the generated comment may vary.
+
+**How to Use:**
+
+1. Open OpenCode in the workspace containing the code, with a configured model and an agent that can edit files, such as Build.
+2. Copy the code you want explained from its source file. Include the original indentation; you can copy a single line or a complete multiline function.
+3. Select `/comment` from the TUI's slash-command menu. A **Comment mode** toast will say **Paste the code you want to comment.**
+4. Paste the copied code into the prompt. The paste automatically submits the comment request; no additional Enter press is needed.
+5. Review the resulting file change. The comment should appear directly above the matching code and explain what it does without changing its behavior.
+
+For example, copying this Python function and pasting it after selecting `/comment`:
+
+```python
+def square(n):
+    return n * n
+```
+
+could produce this change in the source file:
+
+```python
+# Return the square of the supplied number.
+def square(n):
+    return n * n
+```
+
+**Behavior and Edge Cases:**
+
+- Comment mode applies to the next text paste only. Select `/comment` again for each additional snippet.
+- An empty or whitespace-only paste displays **No code pasted** and submits no request. Select `/comment` again before retrying.
+- Paste the actual code, rather than a filename or a rewritten version of the snippet. Indentation and whitespace are preserved for matching; Windows line endings are normalized.
+- When editor file context is available, OpenCode is instructed to check that file first and verify the match. If the snippet occurs in several files, it uses surrounding context to choose the intended file.
+- If a successful search finds no exact match, the request instructs OpenCode to report that the code could not be found and leave files unchanged. Search failures should be reported separately.
+
+**Testing:**
+
+The feature's tests are recorded in Git at commit `cc0ad67`; the source and test files are not present in this documentation checkout.
+
+- `packages/tui/test/comment-tests/comment.test.ts` checks prompt instructions, workspace and editor hints, multiline snippets, whitespace preservation, embedded backticks, language conventions, and search-failure guidance.
+- `packages/tui/test/app-lifecycle.test.tsx` contains TUI integration tests for the command and paste workflow.
+- `packages/tui/test/comment-tests/comment-output.test.ts` checks the output validator with fixed examples. These checks do not demonstrate live model quality.
+- `packages/tui/test/comment-tests/comment-manual-tests.test.ts` provides functions for manual comment review and tests their behavior after editing.
+- `packages/tui/test/comment-tests/comment.live.test.ts` optionally checks actual model-generated file edits. It requires a local OpenCode server, configured credentials, `OPENCODE_COMMENT_LIVE=true`, `OPENCODE_COMMENT_TEST_URL`, and `OPENCODE_COMMENT_TEST_MODEL=provider/model`.
+
+Using genhtml, I was able to verify that saved coverage reports show 27/27 covered lines in `src/component/prompt/comment.ts` and 45/45 source-mapped lines in the `/comment` portions of `src/component/prompt/index.tsx`.
+
