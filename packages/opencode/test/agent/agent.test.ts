@@ -55,6 +55,7 @@ it.instance("returns default native agents when no config", () =>
     expect(names).toContain("compaction")
     expect(names).toContain("title")
     expect(names).toContain("summary")
+    expect(names).toContain("tutor")
   }),
 )
 
@@ -129,6 +130,28 @@ it.instance("explore agent asks for external directories and allows whitelisted 
     expect(
       Permission.evaluate("external_directory", path.join(Global.Path.tmp, "agent-work"), explore!.permission).action,
     ).toBe("allow")
+  }),
+)
+
+it.instance("tutor agent is a primary agent with the learning mode prompt", () =>
+  Effect.gen(function* () {
+    const tutor = yield* load((svc) => svc.get("tutor"))
+    expect(tutor).toBeDefined()
+    expect(tutor?.mode).toBe("primary")
+    expect(tutor?.native).toBe(true)
+    expect(tutor?.prompt).toContain("quiz")
+  }),
+)
+
+it.instance("tutor agent can read and quiz but cannot change files", () =>
+  Effect.gen(function* () {
+    const tutor = yield* load((svc) => svc.get("tutor"))
+    for (const tool of ["read", "grep", "glob", "list", "question"]) expect(evalPerm(tutor, tool)).toBe("allow")
+    for (const tool of ["edit", "write", "bash", "todowrite", "webfetch"]) expect(evalPerm(tutor, tool)).toBe("deny")
+    expect(Permission.evaluate("task", "explore", tutor!.permission).action).toBe("allow")
+    expect(Permission.evaluate("task", "general", tutor!.permission).action).toBe("deny")
+    expect(Permission.evaluate("external_directory", "/some/other/path", tutor!.permission).action).toBe("ask")
+    expect(Permission.evaluate("external_directory", Truncate.GLOB, tutor!.permission).action).toBe("allow")
   }),
 )
 

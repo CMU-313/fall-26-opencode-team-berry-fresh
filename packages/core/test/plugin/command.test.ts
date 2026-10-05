@@ -18,7 +18,7 @@ const locationLayer = Layer.succeed(
 const it = testEffect(AppNodeBuilder.build(CommandV2.node, [[Location.node, locationLayer]]))
 
 describe("CommandPlugin.Plugin", () => {
-  it.effect("registers built-in init and review commands", () =>
+  it.effect("registers built-in init, review, and explain commands", () =>
     Effect.gen(function* () {
       const command = yield* CommandV2.Service
       yield* CommandPlugin.Plugin.effect(
@@ -42,6 +42,13 @@ describe("CommandPlugin.Plugin", () => {
         description: "review changes [commit|branch|pr], defaults to uncommitted",
         subtask: true,
       })
+      expect(yield* command.get("explain")).toMatchObject({
+        name: "explain",
+        description: "explain code [files|dirs], defaults to whole project",
+        agent: "tutor",
+      })
+      expect((yield* command.get("explain"))?.template).toContain("The project root is `/repo`.")
+      expect((yield* command.get("explain"))?.template).not.toContain("${path}")
     }),
   )
 })
