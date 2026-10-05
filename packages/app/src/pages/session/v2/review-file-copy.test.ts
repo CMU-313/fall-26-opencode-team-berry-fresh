@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test"
 import { copyReviewFilePath } from "./review-file-copy"
 
 describe("copyReviewFilePath", () => {
+  // Verify a successful clipboard operation copies the exact path and reports success.
   test("copies the exact path and reports success", async () => {
     const copied: string[] = []
     const success: string[] = []
@@ -21,6 +22,27 @@ describe("copyReviewFilePath", () => {
     expect(failure).toEqual([])
   })
 
+  // Verify success is reported only after the asynchronous clipboard write completes.
+  test("reports success only after the clipboard write completes", async () => {
+    const events: string[] = []
+
+    const result = await copyReviewFilePath("README.md", {
+      writeText: async () => {
+        events.push("write")
+      },
+      onSuccess: () => {
+        events.push("success")
+      },
+      onFailure: () => {
+        events.push("failure")
+      },
+    })
+
+    expect(result).toBe(true)
+    expect(events).toEqual(["write", "success"])
+  })
+
+  // Verify file paths remain unchanged for both root-level and deeply nested files.
   test("preserves nested paths used by normal and filtered file lists", async () => {
     const copied: string[] = []
 
@@ -37,6 +59,7 @@ describe("copyReviewFilePath", () => {
     expect(copied).toEqual(["README.md", "packages/app/src/pages/session/v2/review-panel-v2.tsx"])
   })
 
+  // Verify clipboard errors report failure without incorrectly reporting a successful copy.
   test("reports clipboard failure without reporting success", async () => {
     const success: string[] = []
     const failure: string[] = []
