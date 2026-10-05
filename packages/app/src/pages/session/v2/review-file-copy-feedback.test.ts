@@ -54,7 +54,7 @@ describe("createReviewFileCopyFeedback", () => {
         setCopiedPath: (path) => values.push(path),
         schedule: (() => {
         return nextTimer++
-        }) as typeof setTimeout,
+        }) as unknown as typeof setTimeout,
         cancel: ((timer) => {
         cancelledTimers.push(timer)
         }) as typeof clearTimeout,
@@ -77,7 +77,7 @@ describe("createReviewFileCopyFeedback", () => {
         setCopiedPath: () => undefined,
         schedule: (() => {
         return 1
-        }) as typeof setTimeout,
+        }) as unknown as typeof setTimeout,
         cancel: ((timer) => {
         cancelledTimers.push(timer)
         }) as typeof clearTimeout,

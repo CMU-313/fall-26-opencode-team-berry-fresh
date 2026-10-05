@@ -28,7 +28,7 @@ import {
   type FileTreeV2Node,
 } from "@/components/file-tree-v2-model"
 import { virtualScrollElement } from "@/components/virtual-scroll-element"
-import { REVIEW_FILE_COPY_FEEDBACK_MS } from "@/pages/session/v2/review-file-copy"
+import { createReviewFileCopyFeedback } from "@/pages/session/v2/review-file-copy-feedback"
 
 export type { Kind } from "@/components/file-tree"
 
@@ -151,18 +151,18 @@ export default function FileTreeV2(props: {
   const [root, setRoot] = createSignal<HTMLDivElement>()
   const [focused, setFocused] = createSignal<string>()
   const [copiedPath, setCopiedPath] = createSignal<string>()
-  let copiedPathTimer: ReturnType<typeof setTimeout> | undefined
 
-  onCleanup(() => {
-    if (copiedPathTimer) clearTimeout(copiedPathTimer)
+  const copyFeedback = createReviewFileCopyFeedback({
+    setCopiedPath,
   })
+
+  onCleanup(copyFeedback.cleanup)
 
   const copyPath = async (path: string) => {
     if (!(await props.onCopyPath?.(path))) return
-    setCopiedPath(path)
-    if (copiedPathTimer) clearTimeout(copiedPathTimer)
-    copiedPathTimer = setTimeout(() => setCopiedPath(undefined), REVIEW_FILE_COPY_FEEDBACK_MS)
+    copyFeedback.copied(path)
   }
+
   const virtualizer = createVirtualizer<HTMLDivElement, HTMLDivElement>({
     get count() {
       return rows().length
