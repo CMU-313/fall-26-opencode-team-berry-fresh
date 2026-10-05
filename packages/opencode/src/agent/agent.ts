@@ -14,6 +14,7 @@ import PROMPT_COMPACTION from "./prompt/compaction.txt"
 import PROMPT_EXPLORE from "./prompt/explore.txt"
 import PROMPT_SUMMARY from "./prompt/summary.txt"
 import PROMPT_TITLE from "./prompt/title.txt"
+import PROMPT_TUTOR from "./prompt/tutor.txt"
 import { Permission } from "@/permission"
 import { mergeDeep, pipe, sortBy, values } from "remeda"
 import { Global } from "@opencode-ai/core/global"
@@ -176,6 +177,31 @@ const layer = Layer.effect(
               }),
               user,
             ),
+            mode: "primary",
+            native: true,
+          },
+          tutor: {
+            name: "tutor",
+            description: "Learning mode. Explains code for newcomers without changing files, and can quiz you.",
+            options: {},
+            permission: Permission.merge(
+              defaults,
+              Permission.fromConfig({
+                "*": "deny",
+                read: "allow",
+                grep: "allow",
+                glob: "allow",
+                list: "allow",
+                question: "allow",
+                task: {
+                  "*": "deny",
+                  explore: "allow",
+                },
+                external_directory: readonlyExternalDirectory,
+              }),
+              user,
+            ),
+            prompt: PROMPT_TUTOR,
             mode: "primary",
             native: true,
           },

@@ -1089,6 +1089,9 @@ export function Prompt(props: PromptProps) {
         variant,
         parts: nonTextParts.filter((x) => x.type === "file"),
       })
+      // Stay on a command's primary agent (e.g. /explain -> tutor) so follow-ups keep using it
+      const commandAgent = sync.data.command.find((x) => x.name === command.slice(1))?.agent
+      if (commandAgent && local.agent.list().some((x) => x.name === commandAgent)) local.agent.set(commandAgent)
     } else {
       move.startSubmit()
       sdk.client.session

@@ -91,6 +91,7 @@ const layer = Layer.effect(
       commands[Default.EXPLAIN] = {
         name: Default.EXPLAIN,
         description: "explain code [files|dirs], defaults to whole project",
+        agent: "tutor",
         source: "command",
         get template() {
           return PROMPT_EXPLAIN.replace("${path}", ctx.worktree)
