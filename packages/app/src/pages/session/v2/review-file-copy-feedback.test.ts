@@ -43,4 +43,49 @@ describe("createReviewFileCopyFeedback", () => {
 
     feedback.cleanup()
   })
+
+  // Verify copying another file cancels the previous feedback timer.
+  test("replaces the previous copied path and cancels its timer", () => {
+    const values: (string | undefined)[] = []
+    const cancelledTimers: unknown[] = []
+    let nextTimer = 1
+
+    const feedback = createReviewFileCopyFeedback({
+        setCopiedPath: (path) => values.push(path),
+        schedule: (() => {
+        return nextTimer++
+        }) as typeof setTimeout,
+        cancel: ((timer) => {
+        cancelledTimers.push(timer)
+        }) as typeof clearTimeout,
+    })
+
+    feedback.copied("README.md")
+    feedback.copied("src/app.tsx")
+
+    expect(values).toEqual(["README.md", "src/app.tsx"])
+    expect(cancelledTimers).toEqual([1])
+
+    feedback.cleanup()
+  })
+
+  // Verify cleanup cancels the active feedback timer when the component unmounts.
+  test("cancels the active timer during cleanup", () => {
+    const cancelledTimers: unknown[] = []
+
+    const feedback = createReviewFileCopyFeedback({
+        setCopiedPath: () => undefined,
+        schedule: (() => {
+        return 1
+        }) as typeof setTimeout,
+        cancel: ((timer) => {
+        cancelledTimers.push(timer)
+        }) as typeof clearTimeout,
+    })
+
+    feedback.copied("README.md")
+    feedback.cleanup()
+
+    expect(cancelledTimers).toEqual([1])
+  })
 })
