@@ -32,7 +32,6 @@ import { batch, onMount } from "solid-js"
 import path from "path"
 import { useKV } from "./kv"
 import { usePermission } from "./permission"
-import { mergeSessionHistory } from "./session-history"
 
 const emptyConsoleState: ConsoleState = {
   consoleManagedProviders: [],
@@ -150,8 +149,6 @@ export const {
 
     const fullSyncedSessions = new Set<string>()
     const syncingSessions = new Map<string, Promise<void>>()
-    const historyLoadedSessions = new Set<string>()
-    const loadingHistorySessions = new Map<string, Promise<void>>()
     const hydratingSessions = new Map<string, { messages: Set<string>; parts: Set<string> }>()
     const touchMessage = (sessionID: string, messageID: string) => {
       hydratingSessions.get(sessionID)?.messages.add(messageID)
@@ -341,7 +338,7 @@ export const {
             }),
           )
           const updated = store.message[event.properties.info.sessionID]
-          if (updated.length > 100 && !historyLoadedSessions.has(event.properties.info.sessionID)) {
+          if (updated.length > 100) {
             const oldest = updated[0]
             batch(() => {
               setStore(
@@ -572,29 +569,6 @@ export const {
         return project.instance.path()
       },
       session: {
-        async loadHistory(sessionID: string) {
-          if (historyLoadedSessions.has(sessionID)) return
-          const loading = loadingHistorySessions.get(sessionID)
-          if (loading) return loading
-          const task = (async () => {
-            await result.session.sync(sessionID)
-            const response = await sdk.client.session.messages({ sessionID }, { throwOnError: true })
-            setStore(
-              produce((draft) => {
-                const current = (draft.message[sessionID] ?? []).map((info) => ({
-                  info,
-                  parts: draft.part[info.id] ?? [],
-                }))
-                const merged = mergeSessionHistory(current, response.data ?? [])
-                for (const entry of merged) draft.part[entry.info.id] = entry.parts
-                draft.message[sessionID] = merged.map((entry) => entry.info)
-              }),
-            )
-            historyLoadedSessions.add(sessionID)
-          })().finally(() => loadingHistorySessions.delete(sessionID))
-          loadingHistorySessions.set(sessionID, task)
-          return task
-        },
         get(sessionID: string) {
           const match = search(store.session, sessionID, (s) => s.id)
           if (match.found) return store.session[match.index]

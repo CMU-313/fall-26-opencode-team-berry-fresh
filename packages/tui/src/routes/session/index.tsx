@@ -48,11 +48,9 @@ import { useDialog } from "../../ui/dialog"
 import { DialogAlert } from "../../ui/dialog-alert"
 import { TodoItem } from "../../component/todo-item"
 import { DialogMessage } from "./dialog-message"
-import { getBookmarks, toggleBookmark } from "./bookmarks"
 import type { PromptInfo } from "../../component/prompt/history"
 import { DialogConfirm } from "../../ui/dialog-confirm"
 import { DialogTimeline } from "./dialog-timeline"
-import { DialogBookmarks } from "./dialog-bookmarks"
 import { DialogForkFromTimeline } from "./dialog-fork-from-timeline"
 import { DialogSessionRename } from "../../component/dialog-session-rename"
 import { Sidebar } from "./sidebar"
@@ -119,7 +117,6 @@ const sessionBindingCommands = [
   "session.share",
   "session.rename",
   "session.timeline",
-  "session.bookmarks",
   "session.fork",
   "session.compact",
   "session.unshare",
@@ -424,11 +421,6 @@ export function Session() {
     dialog.clear()
   }
 
-  const scrollToMessageID = (messageID: string) => {
-    const child = scroll.getChildren().find((child) => child.id === messageID)
-    if (child) scroll.scrollBy(child.y - scroll.y - 1)
-  }
-
   function toBottom() {
     setTimeout(() => {
       if (!scroll || scroll.isDestroyed) return
@@ -533,25 +525,14 @@ export function Session() {
       run: () => {
         dialog.replace(() => (
           <DialogTimeline
-            onMove={scrollToMessageID}
+            onMove={(messageID) => {
+              const child = scroll.getChildren().find((child) => {
+                return child.id === messageID
+              })
+              if (child) scroll.scrollBy(child.y - scroll.y - 1)
+            }}
             sessionID={route.sessionID}
             setPrompt={(promptInfo) => prompt?.set(promptInfo)}
-          />
-        ))
-      },
-    },
-    {
-      title: "Bookmarked prompts",
-      value: "session.bookmarks",
-      category: "Session",
-      slash: {
-        name: "bookmarks",
-      },
-      run: () => {
-        dialog.replace(() => (
-          <DialogBookmarks
-            sessionID={route.sessionID}
-            onSelect={(messageID) => requestAnimationFrame(() => scrollToMessageID(messageID))}
           />
         ))
       },
@@ -1390,7 +1371,6 @@ function UserMessage(props: {
 }) {
   const ctx = use()
   const local = useLocal()
-  const kv = useKV()
   const text = createMemo(() => {
     const texts = props.parts
       .map((x) => {
@@ -1405,7 +1385,6 @@ function UserMessage(props: {
   const files = createMemo(() => props.parts.flatMap((x) => (x.type === "file" ? [x] : [])))
   const { theme } = useTheme()
   const [hover, setHover] = createSignal(false)
-  const bookmarked = createMemo(() => getBookmarks(kv, props.message.sessionID).includes(props.message.id))
   const queued = createMemo(() => props.pending !== undefined && props.index > props.pending)
   const color = createMemo(() => local.agent.color(props.message.agent))
   const queuedFg = createMemo(() => selectedForeground(theme, color()))
@@ -1438,21 +1417,7 @@ function UserMessage(props: {
             backgroundColor={hover() ? theme.backgroundElement : theme.backgroundPanel}
             flexShrink={0}
           >
-            <box flexDirection="row" justifyContent="space-between" gap={1}>
-              <text fg={theme.text} flexGrow={1}>
-                {text()}
-              </text>
-              <box
-                onMouseUp={(event) => {
-                  event.stopPropagation()
-                  toggleBookmark(kv, props.message.sessionID, props.message.id)
-                }}
-              >
-                <text fg={bookmarked() ? theme.warning : hover() ? theme.text : theme.textMuted}>
-                  {bookmarked() ? "Bookmarked" : "Bookmark"}
-                </text>
-              </box>
-            </box>
+            <text fg={theme.text}>{text()}</text>
             <Show when={files().length}>
               <box flexDirection="row" paddingBottom={metadataVisible() ? 1 : 0} paddingTop={1} gap={1} flexWrap="wrap">
                 <For each={files()}>
