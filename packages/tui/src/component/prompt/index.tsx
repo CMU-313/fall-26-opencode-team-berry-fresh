@@ -57,6 +57,7 @@ import { usePromptWorkspace } from "./workspace"
 import { usePromptMove } from "./move"
 import { readLocalAttachment } from "./local-attachment"
 import { useLocation } from "../../context/location"
+import { buildCommentPrompt } from "./comment"
 
 registerOpencodeSpinner()
 
@@ -127,7 +128,6 @@ function getEditorRangeLabel(selection: EditorSelection["ranges"][number]) {
 
 function formatEditorContext(selection: EditorSelection) {
   const selected = selection.ranges.filter(hasEditorRangeSelection)
-  if (selected.length === 0)
     return `<system-reminder>Note: The user opened the file "${selection.filePath}". This may or may not be relevant to the current task.</system-reminder>\n`
 
   const ranges = selected.map((range, index) => {
@@ -143,6 +143,10 @@ let stashed: { prompt: PromptInfo; cursor: number } | undefined
 export function Prompt(props: PromptProps) {
   let input: TextareaRenderable
   let anchor: BoxRenderable
+
+  // commentMode false means the prompt is in normal mode, true means the prompt is in comment mode. This is used to determine whether to show the comment placeholder or not.
+  let commentMode  = false
+
   const [inputTarget, setInputTarget] = createSignal<TextareaRenderable | undefined>()
 
   const leader = useLeaderActive()
@@ -355,6 +359,21 @@ export function Prompt(props: PromptProps) {
           if (!handled) return
 
           dialog.clear()
+        },
+      },
+      {
+        title: "Comment selected code",
+        name: "prompt.comment",
+        category: "Prompt",
+        slashName: "comment",
+        run: async () => {
+          commentMode = true
+      
+          toast.show({
+            title: "Comment mode",
+            message: "Paste the code you want to comment.",
+            variant: "info",
+          })
         },
       },
       {
@@ -1184,17 +1203,59 @@ export function Prompt(props: PromptProps) {
   }
 
   async function pasteInputText(text: string) {
+    if (commentMode) {
+      commentMode = false
+  
+      const normalizedText = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n")
+      const code = normalizedText
+  
+      if (!code.trim()) {
+        toast.show({
+          title: "No code pasted",
+          message: "Paste the code you want to comment.",
+          variant: "warning",
+        })
+        return
+      }
+  
+      input.extmarks.clear()
+      setStore("extmarkToPartIndex", new Map())
+      setStore("mode", "normal")
+      input.setText(
+        buildCommentPrompt(
+          code,
+          // The launch directory may be a package inside the repository.
+          (project.instance.path().worktree === "/" ? undefined : project.instance.path().worktree) ||
+            location()?.directory ||
+            project.instance.directory() ||
+            paths.cwd,
+          editorContext()?.filePath,
+        ),
+      )
+  
+      setStore("prompt", {
+        input: input.plainText,
+        parts: [],
+      })
+  
+      await submit()
+      return
+    }
+  
     const normalizedText = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n")
     const pastedContent = normalizedText.trim()
     const filepath = pastedFilepath(pastedContent, terminalEnvironment.platform)
     const isUrl = /^(https?):\/\//.test(filepath)
+  
     if (!isUrl) {
       const attachment = await readLocalAttachment(filepath)
       const filename = path.basename(filepath)
+  
       if (attachment?.type === "text") {
         pasteText(attachment.content, `[SVG: ${filename ?? "image"}]`)
         return
       }
+  
       if (attachment?.type === "binary") {
         await pasteAttachment({
           filename,
@@ -1205,8 +1266,9 @@ export function Prompt(props: PromptProps) {
         return
       }
     }
-
+  
     const lineCount = (pastedContent.match(/\n/g)?.length ?? 0) + 1
+  
     if (
       (lineCount >= 3 || pastedContent.length > 150) &&
       kv.get("paste_summary_enabled", !sync.data.config.experimental?.disable_paste_summary)
@@ -1214,9 +1276,9 @@ export function Prompt(props: PromptProps) {
       pasteText(pastedContent, `[Pasted ~${lineCount} lines]`)
       return
     }
-
+  
     input.insertText(normalizedText)
-
+  
     setTimeout(() => {
       if (!input || input.isDestroyed) return
       input.getLayoutNode().markDirty()
@@ -1410,7 +1472,7 @@ export function Prompt(props: PromptProps) {
 
                 // Windows Terminal <1.25 can surface image-only clipboard as an
                 // empty bracketed paste. Windows Terminal 1.25+ does not.
-                if (!pastedContent) {
+                if (!pastedContent && !commentMode) {
                   keymap.dispatchCommand("prompt.paste")
                   return
                 }
