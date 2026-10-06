@@ -1,11 +1,16 @@
 import { FileIcon } from "@opencode-ai/ui/file-icon"
+import { Icon } from "@opencode-ai/ui/v2/icon"
+import { IconButtonV2 } from "@opencode-ai/ui/v2/icon-button-v2"
+import { TooltipV2 } from "@opencode-ai/ui/v2/tooltip-v2"
+import { useI18n } from "@opencode-ai/ui/context/i18n"
 import "@opencode-ai/ui/v2/file-tree-v2.css"
 import { getDirectory, getFilename } from "@opencode-ai/core/util/path"
-import { createEffect, createMemo, createSignal, For, Show } from "solid-js"
+import { createEffect, createMemo, createSignal, For, onCleanup, Show } from "solid-js"
 import { kindChange, kindLabel, type Kind } from "@/components/file-tree-v2"
 import { normalizePath } from "@/pages/session/v2/review-diff-kinds"
 import { createVirtualizer, defaultRangeExtractor } from "@tanstack/solid-virtual"
 import { virtualScrollElement } from "@/components/virtual-scroll-element"
+import { createReviewFileCopyFeedback } from "./review-file-copy-feedback"
 
 // Drives the highlight/selection of the flat search-result list from the filter
 // input's keyboard events.
@@ -48,12 +53,26 @@ export function SessionFileListV2(props: {
   optionID?: (path: string) => string
   onFileClick: (path: string) => void
   onFileDoubleClick?: (path: string) => void
+  onCopyPath?: (path: string) => Promise<boolean> | boolean
 }) {
+  const i18n = useI18n()
   const active = () => normalizePath(props.active ?? "")
   const highlighted = () => normalizePath(props.highlighted ?? "")
   const normalized = createMemo(() => props.files.map(normalizePath))
   const [root, setRoot] = createSignal<HTMLDivElement>()
   const [focused, setFocused] = createSignal<string>()
+  const [copiedPath, setCopiedPath] = createSignal<string>()
+
+  const copyFeedback = createReviewFileCopyFeedback({
+    setCopiedPath,
+  })
+
+  onCleanup(copyFeedback.cleanup)
+
+  const copyPath = async (path: string) => {
+    if (!(await props.onCopyPath?.(path))) return
+    copyFeedback.copied(path)
+  }
   const virtualizer = createVirtualizer<HTMLDivElement, HTMLDivElement>({
     get count() {
       return props.files.length
@@ -120,21 +139,23 @@ export function SessionFileListV2(props: {
                     transform: `translateY(${item().start}px)`,
                   }}
                 >
-                  <button
-                    type="button"
-                    id={props.optionID?.(path)}
-                    role={props.role ? "option" : undefined}
-                    aria-selected={props.role ? selected() : undefined}
-                    data-slot="file-tree-v2-row"
-                    data-path={path}
-                    data-selected={selected() ? "" : undefined}
-                    data-highlighted={highlightedRow() ? "" : undefined}
-                    style="padding-left: 8px"
-                    onFocus={() => setFocused(path)}
-                    onBlur={() => setFocused(undefined)}
-                    onClick={() => props.onFileClick(path)}
-                    onDblClick={() => props.onFileDoubleClick?.(path)}
-                  >
+                  <div class="relative">
+                    <button
+                      type="button"
+                      id={props.optionID?.(path)}
+                      role={props.role ? "option" : undefined}
+                      aria-selected={props.role ? selected() : undefined}
+                      data-slot="file-tree-v2-row"
+                      data-path={path}
+                      data-selected={selected() ? "" : undefined}
+                      data-highlighted={highlightedRow() ? "" : undefined}
+                      class="pr-8"
+                      style="padding-left: 8px"
+                      onFocus={() => setFocused(path)}
+                      onBlur={() => setFocused(undefined)}
+                      onClick={() => props.onFileClick(path)}
+                      onDblClick={() => props.onFileDoubleClick?.(path)}
+                    >
                     <span class="filetree-iconpair size-4">
                       <FileIcon node={{ path, type: "file" }} class="size-4 filetree-icon filetree-icon--color" />
                       <FileIcon node={{ path, type: "file" }} class="size-4 filetree-icon filetree-icon--mono" mono />
@@ -154,7 +175,33 @@ export function SessionFileListV2(props: {
                         </span>
                       )}
                     </Show>
-                  </button>
+                    </button>
+                    <Show when={props.onCopyPath}>
+                      <TooltipV2 openDelay={500} value={i18n.t("session.header.open.copyPath")}>
+                        <IconButtonV2
+                          type="button"
+                          variant="ghost-muted"
+                          size="small"
+                          class="absolute end-1 top-1 !size-6 bg-v2-background-bg-base"
+                          title={
+                            copiedPath() === path
+                              ? i18n.t("session.share.copy.copied")
+                              : i18n.t("session.header.open.copyPath")
+                          }
+                          aria-label={
+                            copiedPath() === path
+                              ? i18n.t("session.share.copy.copied")
+                              : i18n.t("session.header.open.copyPath")
+                          }
+                          icon={<Icon name={copiedPath() === path ? "check" : "copy"} />}
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            void copyPath(path)
+                          }}
+                        />
+                      </TooltipV2>
+                    </Show>
+                  </div>
                 </div>
               )}
             </Show>

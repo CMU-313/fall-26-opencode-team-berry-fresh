@@ -6,6 +6,7 @@ import {
   createMemo,
   createSignal,
   For,
+  onCleanup,
   Show,
   splitProps,
   type ComponentProps,
@@ -14,6 +15,9 @@ import {
 import { Dynamic } from "solid-js/web"
 import type { FileNode } from "@opencode-ai/sdk/v2"
 import { Icon } from "@opencode-ai/ui/v2/icon"
+import { IconButtonV2 } from "@opencode-ai/ui/v2/icon-button-v2"
+import { TooltipV2 } from "@opencode-ai/ui/v2/tooltip-v2"
+import { useI18n } from "@opencode-ai/ui/context/i18n"
 import { pathToFileUrl, withFileDragImage, type Kind } from "@/components/file-tree"
 import { createVirtualizer, defaultRangeExtractor } from "@tanstack/solid-virtual"
 import {
@@ -24,6 +28,7 @@ import {
   type FileTreeV2Node,
 } from "@/components/file-tree-v2-model"
 import { virtualScrollElement } from "@/components/virtual-scroll-element"
+import { createReviewFileCopyFeedback } from "@/pages/session/v2/review-file-copy-feedback"
 
 export type { Kind } from "@/components/file-tree"
 
@@ -130,8 +135,10 @@ export default function FileTreeV2(props: {
   draggable?: boolean
   onFileClick?: (file: FileNode) => void
   onFileDoubleClick?: (file: FileNode) => void
+  onCopyPath?: (path: string) => Promise<boolean> | boolean
 }) {
   const file = useFile()
+  const i18n = useI18n()
   const live = () => props.allowed === undefined
   const draggable = () => props.draggable ?? true
   const active = () => normalizeFileTreeV2Path(props.active ?? "")
@@ -143,6 +150,19 @@ export default function FileTreeV2(props: {
   })
   const [root, setRoot] = createSignal<HTMLDivElement>()
   const [focused, setFocused] = createSignal<string>()
+  const [copiedPath, setCopiedPath] = createSignal<string>()
+
+  const copyFeedback = createReviewFileCopyFeedback({
+    setCopiedPath,
+  })
+
+  onCleanup(copyFeedback.cleanup)
+
+  const copyPath = async (path: string) => {
+    if (!(await props.onCopyPath?.(path))) return
+    copyFeedback.copied(path)
+  }
+
   const virtualizer = createVirtualizer<HTMLDivElement, HTMLDivElement>({
     get count() {
       return rows().length
@@ -240,29 +260,60 @@ export default function FileTreeV2(props: {
                     <Show
                       when={row().node.type === "directory"}
                       fallback={
-                        <FileTreeNodeV2
-                          node={row().node}
-                          level={row().level}
-                          active={active()}
-                          draggable={draggable()}
-                          kinds={props.kinds}
-                          as="button"
-                          type="button"
-                          class="relative"
-                          onFocus={() => setFocused(row().node.path)}
-                          onBlur={() => setFocused(undefined)}
-                          onClick={() => selectFile(row().node, props.onFileClick)}
-                          onDblClick={() => selectFile(row().node, props.onFileDoubleClick)}
-                        >
-                          <GuideLines level={row().level} />
-                          <Show when={row().level > 0}>
-                            <div class="w-4 shrink-0" />
+                        <div class="relative">
+                          <FileTreeNodeV2
+                            node={row().node}
+                            level={row().level}
+                            active={active()}
+                            draggable={draggable()}
+                            kinds={props.kinds}
+                            as="button"
+                            type="button"
+                            class="relative pr-8"
+                            onFocus={() => setFocused(row().node.path)}
+                            onBlur={() => setFocused(undefined)}
+                            onClick={() => selectFile(row().node, props.onFileClick)}
+                            onDblClick={() => selectFile(row().node, props.onFileDoubleClick)}
+                          >
+                            <GuideLines level={row().level} />
+                            <Show when={row().level > 0}>
+                              <div class="w-4 shrink-0" />
+                            </Show>
+                            <span class="filetree-iconpair size-4">
+                              <FileIcon node={row().node} class="size-4 filetree-icon filetree-icon--color" />
+                              <FileIcon node={row().node} class="size-4 filetree-icon filetree-icon--mono" mono />
+                            </span>
+                          </FileTreeNodeV2>
+                          <Show when={props.onCopyPath}>
+                            <TooltipV2 openDelay={500} value={i18n.t("session.header.open.copyPath")}>
+                              <IconButtonV2
+                                type="button"
+                                variant="ghost-muted"
+                                size="small"
+                                class="absolute end-1 top-1 !size-6 bg-v2-background-bg-base"
+                                title={
+                                  copiedPath() === row().node.originalPath
+                                    ? i18n.t("session.share.copy.copied")
+                                    : i18n.t("session.header.open.copyPath")
+                                }
+                                aria-label={
+                                  copiedPath() === row().node.originalPath
+                                    ? i18n.t("session.share.copy.copied")
+                                    : i18n.t("session.header.open.copyPath")
+                                }
+                                icon={
+                                  <Icon
+                                    name={copiedPath() === row().node.originalPath ? "check" : "copy"}
+                                  />
+                                }
+                                onClick={(event) => {
+                                  event.stopPropagation()
+                                  void copyPath(row().node.originalPath)
+                                }}
+                              />
+                            </TooltipV2>
                           </Show>
-                          <span class="filetree-iconpair size-4">
-                            <FileIcon node={row().node} class="size-4 filetree-icon filetree-icon--color" />
-                            <FileIcon node={row().node} class="size-4 filetree-icon filetree-icon--mono" mono />
-                          </span>
-                        </FileTreeNodeV2>
+                        </div>
                       }
                     >
                       <FileTreeNodeV2

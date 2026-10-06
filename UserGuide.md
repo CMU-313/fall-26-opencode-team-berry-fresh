@@ -20,6 +20,34 @@ The following two test files contain my automated tests:
 
 Using a coverage report generated with genhtml, I was able to verify that these tests covered all the changes I made. The two documents containing the bulk of the logic for my changes are packages/tui/src/feature-plugins/system/notifications.ts and packages/tui/src/component/dialog-notifications.tsx, and these two files had coverage rates of 97.2% and 100%, respectively.
 
+### Copy File Path
+#### Author: Rebecca Sucgang (rsucgang)
+
+**The Feature:** The OpenCode desktop UI includes a copy button next to each file in the change review panel. This allows users to quickly copy the complete path of a changed file. After a successful copy, the button temporarily changes to a checkmark and a confirmation toast displays the copied path.
+
+**How to Use:**
+
+1. From the root repository, start the OpenCode server with `bun run --cwd packages/opencode src/index.ts serve --port 4096`.
+2. In a separate terminal, run `cd packages/app` and `bun run dev`, then open the localhost URL shown by Vite.
+3. Add the root OpenCode repository as a project and start a new session.
+4. Make sure the repository has at least one changed file and open **Files Changed**.
+5. Click the copy icon next to a changed file. A checkmark and confirmation toast will appear after a successful copy.
+6. Paste the path into the prompt or another text field to verify that the complete path was copied.
+7. The copy button can also be used after searching for a file with **Filter files**.
+
+**Testing:**
+
+The following test files contain my automated tests:
+
+- `packages/app/src/pages/session/v2/review-file-copy.test.ts`
+  - Covers exact and nested file paths, clipboard success and failure, and waiting for the clipboard write to complete before reporting success.
+- `packages/app/src/pages/session/v2/review-file-copy-feedback.test.ts`
+  - Covers copied feedback state, the feedback timeout, repeated copies, and timer cleanup.
+
+All 8 automated tests pass. Using Bun's coverage report, I verified that `review-file-copy.ts` and `review-file-copy-feedback.ts`, which contain the main logic for this feature, both have 100% function and line coverage.
+
+I also manually tested the feature in both the normal and filtered changed-file views to verify that the correct path is copied and the expected checkmark and confirmation toast appear.
+
 ### Add a Code Comment with /comment Slash Command
 #### Author: Sanjitha Govindan (sanjithg)
 
@@ -67,3 +95,4 @@ The feature's tests are recorded in Git at commit `cc0ad67`; the source and test
 - `packages/tui/test/comment-tests/comment.live.test.ts` optionally checks actual model-generated file edits. It requires a local OpenCode server, configured credentials, `OPENCODE_COMMENT_LIVE=true`, `OPENCODE_COMMENT_TEST_URL`, and `OPENCODE_COMMENT_TEST_MODEL=provider/model`.
 
 Using genhtml, I was able to verify that saved coverage reports show 27/27 covered lines in `src/component/prompt/comment.ts` and 45/45 source-mapped lines in the `/comment` portions of `src/component/prompt/index.tsx`.
+
