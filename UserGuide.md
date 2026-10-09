@@ -96,3 +96,48 @@ The feature's tests are recorded in Git at commit `cc0ad67`; the source and test
 
 Using genhtml, I was able to verify that saved coverage reports show 27/27 covered lines in `src/component/prompt/comment.ts` and 45/45 source-mapped lines in the `/comment` portions of `src/component/prompt/index.tsx`.
 
+### Learning Mode: /explain Command, Tutor Agent, and Interactive Quiz
+#### Author: Sara Laman (slaman)
+
+**The Feature:** Learning mode helps students (and other users new to software development) navigate an unfamiliar codebase without risk of changing it. The primary goal of this feature is to have users discover a new educational use of OpenCode. The feature has two main parts that are critical to the functionality:
+
+- **`/explain` slash command:** asks OpenCode to explain the whole project, a single file, or a set of files or folders in a beginner-friendly way. The explanation starts with the big picture, defines technical terms, points to real `file_path:line_number` locations, and ends with a **Where to look next** section to help users continue with their exploration.
+- **Tutor agent:** a new read-only primary agent that `/explain` runs on. Tutor can read and search code (and hand broad searches to the Explore subagent), but file edits and bash commands are denied, so asking it questions never changes the project. After an explanation, Tutor offers a quick multiple-choice quiz that users can choose to take to check their understanding.
+
+**How to Use:**
+
+1. Open OpenCode in the project you want to learn about, with a configured model.
+2. Type `/explain` in the prompt, optionally followed by what you want explained:
+   - `/explain` (without any file or folder names following it) explains the whole project, starting from the README, package manifests, and entry points.
+   - `/explain src/index.ts` explains a single file in depth, including where it is used.
+   - `/explain src/api src/db` briefly explains each file or folder and then how they connect to each other.
+3. Read the explanation. Your session switches to the **Tutor** agent, so any follow-up questions you type also stay in learning mode.
+4. When asked **Want a quick quiz on this?**, choose **Yes** to answer 1-3 multiple-choice questions about the code that was explained, or **Not now** to skip. After each answer, Tutor tells you whether you were right and explains why, with references to the code.
+5. Press **Tab** to switch back to the Build agent when you are ready to make changes to the project.
+
+Note: You can also select **Tutor** with **Tab** at any time and ask questions directly, without using `/explain`.
+
+**Behavior and Edge Cases:**
+
+- If a path passed to `/explain` does not exist, Tutor says so and suggests similar paths it found (how spelling mistakes in file/folder names are handled).
+- If you ask Tutor to change code, it explains how you could make the change yourself (which file, what to change, and why) instead of editing anything.
+- Tutor only describes code it has actually read and says so when it is unsure, rather than guessing.
+- Quiz questions have exactly one correct answer and do not hint at it. Explanations and quiz wording come from the configured model, so they may vary between runs.
+
+**Testing:**
+
+The following test files contain my automated tests:
+
+- `packages/opencode/test/command/explain.test.ts` (entire file)
+  - Covers `/explain` being registered as a built-in command on the tutor agent, and its template filling in the project root and ending with a quiz offer.
+- `packages/opencode/test/agent/agent.test.ts` (tutor agent tests)
+  - Covers Tutor being a native primary agent with the learning-mode prompt, allowing read, grep, glob, list, question, and the Explore subagent, and denying edit, write, bash, todowrite, webfetch, and other subagents.
+- `packages/opencode/test/session/prompt.test.ts` (`/explain` end-to-end test)
+  - Runs `/explain` on a fixture file and verifies that the request is answered by the tutor agent with the explain prompt, the file argument, and the project root.
+- `packages/core/test/plugin/command.test.ts` and `packages/core/test/agent.test.ts`
+  - Cover the same `/explain` registration and tutor permissions in the core plugin system.
+
+Notes:
+- This change was meant for the OpenCode TUI, so I also conducted manual testing in Sprint 1 to make sure the feature worked as expected.
+- I ran `bun test` on my changed files in `packages/opencode` and `packages/core` to ensure that all of the tests I wrote passed. 105/105 tests passed for `packages/opencode` (one test was skipped that I did not write) and 9/9 tests passed for `packages/core`. I also ran `bun typecheck` on `packages/opencode` and `packages/core` to verify that my code changes did not introduce any type errors. 
+- I used lcov and genhtml to produce a coverage report to ensure that all of my lines of changed code were hit by the tests. The coverage report showed 478/583 lines hit for `packages/opencode` (all of my lines of changed code were hit, as seen in the screenshots included in my PR comment) and 165/165 lines hit for `packages/core`.
