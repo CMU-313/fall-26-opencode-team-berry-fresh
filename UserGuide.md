@@ -141,3 +141,39 @@ Notes:
 - This change was meant for the OpenCode TUI, so I also conducted manual testing in Sprint 1 to make sure the feature worked as expected.
 - I ran `bun test` on my changed files in `packages/opencode` and `packages/core` to ensure that all of the tests I wrote passed. 105/105 tests passed for `packages/opencode` (one test was skipped that I did not write) and 9/9 tests passed for `packages/core`. I also ran `bun typecheck` on `packages/opencode` and `packages/core` to verify that my code changes did not introduce any type errors. 
 - I used lcov and genhtml to produce a coverage report to ensure that all of my lines of changed code were hit by the tests. The coverage report showed 478/583 lines hit for `packages/opencode` (all of my lines of changed code were hit, as seen in the screenshots included in my PR comment) and 165/165 lines hit for `packages/core`.
+
+### Prompt Bookmarks in the OpenCode TUI
+#### Author: Thomas Cherian (tcherian23)
+
+**The Feature:** Prompt bookmarks let users save prompts and return to them later in an OpenCode TUI session. Bookmarks are stored separately for each session and stay available after closing and reopening the TUI. Users can add or delete bookmarks directly on prompts, from the `/bookmarks` command, or from `/timeline` command.
+
+**How to Use:**
+
+1. Open a session in the OpenCode TUI and have multiple prompts.
+2. Select 'Bookmark' on the right side of a prompt. This changes it to 'Bookmarked' so you know that the prompt was saved. Press it again to remove the bookmark.
+3. Enter `/bookmarks` to open the bookmark command. Scroll or type in the search bar to filter the saved prompts.
+4. Go to a bookmark and press 'Enter' to go to that prompt in the session.
+5. To remove a bookmark while viewing the bookmarks, highlight it and press Ctrl + D.
+6. Enter `/timeline` to view all prompts in the session. Bookmarked prompts are labeled Bookmarked. Highlight any prompt and press Ctrl + D to add or remove its bookmark.
+7. You can close and reopen the session to make sure that its saved bookmarks are still there.
+
+**Behavior and Edge Cases:**
+
+- Each session has its own bookmark list, so bookmarking a prompt in one session does not affect another session.
+- The bookmark page shows instruction when no prompts have been saved and a separate message when a search has no matches.
+- If a saved bookmark is older than the messages initially loaded by the TUI, it loads the older session history so the prompt can still be displayed.
+
+**Testing:**
+
+The following test files contain my automated tests:
+
+- `packages/tui/test/routes/session/bookmarks.test.tsx`
+  - Covers bookmarks across TUI mounts, session isolation, adding and removing bookmarks, cleaning up invalid stored values, message ordering, and removed messages.
+- `packages/tui/test/routes/session/bookmark-dialogs.test.tsx`
+  - Renders the real bookmark and timeline and covers displaying only saved prompts, filtering by search, selecting a bookmark, removing with Ctrl + D, timeline bookmark, adding and removing from the timeline, and showing a bookmark from older session.
+- `packages/tui/test/context/session-history.test.ts`
+  - Uses a fake session with more than 100 prompts to show that an older bookmarked prompt loads without losing newer or updated session messages.
+
+All 11 bookmark automated tests pass. I also manually tested bookmarking and unbookmarking prompts, searching and going through `/bookmarks`, adding and removing bookmarks from `/timeline`, and reopening a session with saved bookmarks. I ran the complete TUI test suite and TUI typecheck to check that the feature did not break the existing functionality.
+
+
