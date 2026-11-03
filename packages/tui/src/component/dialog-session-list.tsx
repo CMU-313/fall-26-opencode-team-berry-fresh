@@ -42,6 +42,13 @@ export function loadDialogSessionList<T>(input: {
   )
 }
 
+export function orderByRecency(sessionsList: { id: string; parentID?: string; time: { updated: number } }[]) {
+  return sessionsList
+    .filter((x) => x.parentID === undefined)
+    .toSorted((a, b) => b.time.updated - a.time.updated)
+    .map((x) => x.id)
+}
+
 export function DialogSessionList() {
   const dialog = useDialog()
   const route = useRoute()
@@ -183,13 +190,6 @@ export function DialogSessionList() {
         }}
       />
     ))
-  }
-
-  function orderByRecency(sessionsList: NonNullable<ReturnType<typeof sessions>>) {
-    return sessionsList
-      .filter((x) => x.parentID === undefined)
-      .toSorted((a, b) => b.time.updated - a.time.updated)
-      .map((x) => x.id)
   }
 
   const browseOrder = createMemo(() => orderByRecency(browseResults() ?? sync.data.session))
