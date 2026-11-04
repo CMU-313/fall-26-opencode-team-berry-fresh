@@ -49,11 +49,11 @@ describe("dialog session list", () => {
     ).toBeUndefined()
   })
 
-  // R1: Any past session in the current project can be found by searching its title in /sessions, even if it is
-  // older than the 100 most recent shown by default.
+  // R1: Typing a title in /sessions searches all of the current project's sessions for it, not just the 100 most
+  // recent shown by default.
   // Kind: invariant
   // Generators: non-blank titles with optional surrounding spaces, since users often type stray whitespace.
-  test("R1: any title you search for is sent to the search", () => {
+  test("R1: any typed title is searched across the current project", () => {
     fc.assert(
       fc.property(
         fc.string({ minLength: 1 }).filter((title) => title.trim() !== ""),
@@ -111,7 +111,7 @@ describe("dialog session list", () => {
   // the server are not limited to Error objects.
   test("R4: if loading fails, nothing crashes and old sessions still show", async () => {
     await fc.assert(
-      fc.asyncProperty(fc.string(), fc.option(fc.anything()), fc.boolean(), async (search, reason, rejects) => {
+      fc.asyncProperty(fc.string(), fc.anything(), fc.boolean(), async (search, reason, rejects) => {
         const loaded = await loadDialogSessionList({
           search,
           filter: {},
