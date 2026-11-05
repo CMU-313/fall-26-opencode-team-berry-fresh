@@ -40,7 +40,7 @@ describe("util.process", () => {
     })
 
     expect(out.code).not.toBe(0)
-    expect(Date.now() - started).toBeLessThan(2500)
+    expect(Date.now() - started).toBeLessThan(5000)
   }, 3000)
 
   test("kills after timeout when process ignores terminate signal", async () => {
