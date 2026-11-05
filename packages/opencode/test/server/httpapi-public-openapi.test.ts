@@ -269,9 +269,20 @@ describe("PublicApi OpenAPI v2 errors", () => {
       ["post", "/session/{sessionID}/unrevert"],
       ["delete", "/session/{sessionID}/message/{messageID}"],
     ] as const) {
-      expect(componentName(responseRef(spec.paths[route[1]]?.[route[0]]?.responses?.["409"]) ?? "")).toBe(
+      expect(componentNames(spec.paths[route[1]]?.[route[0]]?.responses?.["409"])).toContain(
         "SessionBusyError",
       )
+    }
+  })
+
+  test("documents undo conflict errors alongside session busy errors", () => {
+    const spec = OpenApi.fromApi(PublicApi) as OpenApiSpec
+
+    for (const path of ["/session/{sessionID}/revert", "/session/{sessionID}/unrevert"]) {
+      expect(componentNames(spec.paths[path]?.post?.responses?.["409"]).sort()).toEqual([
+        "SessionBusyError",
+        "UndoConflictError",
+      ])
     }
   })
 
