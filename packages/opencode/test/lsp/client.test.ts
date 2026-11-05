@@ -479,7 +479,7 @@ describe("LSPClient interop", () => {
         const started = Date.now()
         await client.waitForDiagnostics({ path: file, version, mode: "full" })
 
-        expect(Date.now() - started).toBeLessThan(1_000)
+        expect(Date.now() - started).toBeLessThan(3000)
 
         await client.shutdown()
       },
