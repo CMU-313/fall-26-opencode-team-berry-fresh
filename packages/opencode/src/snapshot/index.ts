@@ -3,12 +3,14 @@ import { Cause, Duration, Effect, Layer, Schedule, Schema, Semaphore, Context } 
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
 import { formatPatch, structuredPatch } from "diff"
 import path from "path"
+import { lstat } from "node:fs/promises"
 import { AppProcess } from "@opencode-ai/core/process"
 import { InstanceState } from "@/effect/instance-state"
 import { FSUtil } from "@opencode-ai/core/fs-util"
 import { Hash } from "@opencode-ai/core/util/hash"
 import { Config } from "@/config/config"
 import { Global } from "@opencode-ai/core/global"
+import { Undo } from "./undo"
 import { Info } from "@opencode-ai/schema/file-diff"
 
 export const Patch = Schema.Struct({
@@ -34,6 +36,10 @@ interface GitResult {
 type State = Omit<Interface, "init">
 
 export interface Interface {
+  readonly reconcile: (
+    changes: { file: string; expected?: string; desired?: string }[],
+    decisions?: readonly (typeof Undo.Decision.Type)[],
+  ) => Effect.Effect<void, Undo.ConflictError>
   readonly init: () => Effect.Effect<void>
   readonly cleanup: () => Effect.Effect<void>
   readonly track: () => Effect.Effect<string | undefined>
@@ -405,6 +411,124 @@ const layer: Layer.Layer<Service, never, FSUtil.Service | AppProcess.Service | C
           )
         })
 
+        const reconcile = Effect.fnUntraced(function* (
+          changes: { file: string; expected?: string; desired?: string }[],
+          decisions: readonly (typeof Undo.Decision.Type)[] = [],
+        ) {
+          return yield* locked(
+            Effect.gen(function* () {
+              const blob = Effect.fnUntraced(function* (tree: string | undefined, file: string) {
+                if (!tree) return undefined
+                const result = yield* git([...args(["ls-tree", "-z", tree, "--", `:(literal)${file}`])], {
+                  cwd: state.worktree,
+                })
+                if (result.code !== 0) throw new Error("Cannot read undo snapshot")
+                const entry = result.text.split("\t")[0].split(" ")
+                return entry.length === 3 ? { mode: entry[0], hash: entry[2] } : null
+              })
+              const plans = []
+              const conflicts: (typeof Undo.Conflict.Type)[] = []
+              for (const change of changes) {
+                const rel = path.relative(state.worktree, change.file)
+                if (
+                  !rel ||
+                  rel.startsWith(`..${path.sep}`) ||
+                  rel === ".." ||
+                  path.isAbsolute(rel) ||
+                  rel.split(path.sep).some((part) => part.toLowerCase() === ".git")
+                )
+                  throw new Error("Undo path outside worktree")
+                // Never follow symlinks, including parent directories, when restoring.
+                for (const part of rel
+                  .split(path.sep)
+                  .map((_, i, parts) => path.join(state.worktree, ...parts.slice(0, i + 1)))) {
+                  const stat = yield* Effect.promise(() =>
+                    lstat(part).catch((error: NodeJS.ErrnoException) => {
+                      if (error.code === "ENOENT") return undefined
+                      throw error
+                    }),
+                  )
+                  if (!stat) continue
+                  if (!stat.isFile() && !stat.isDirectory())
+                    throw new Error("Undo cannot restore a symbolic link or special file")
+                }
+                const current = (yield* exists(change.file))
+                  ? yield* fs.readFile(change.file).pipe(Effect.orDie)
+                  : undefined
+                const hash = current
+                  ? new Bun.CryptoHasher("sha1").update(`blob ${current.length}\0`).update(current).digest("hex")
+                  : undefined
+                const expected = yield* blob(change.expected, rel)
+                const desired = yield* blob(change.desired, rel)
+                if (desired === undefined) throw new Error("Missing undo target snapshot")
+                if ([expected, desired].some((entry) => entry && !["100644", "100755"].includes(entry.mode)))
+                  throw new Error("Undo requires regular files")
+                if (hash === desired?.hash) continue
+                const token = new Bun.CryptoHasher("sha256")
+                  .update(JSON.stringify([rel, hash, expected, desired]))
+                  .digest("hex")
+                const decision = decisions.find((item) => item.file === change.file && item.token === token)
+                if (decision?.choice === "keep") continue
+                let merged: string | undefined
+                if (expected && desired && current && hash !== expected.hash) {
+                  const before = yield* git([...args(["show", expected.hash])])
+                  const after = yield* git([...args(["show", desired.hash])])
+                  const text = new TextDecoder("utf-8", { fatal: false }).decode(current)
+                  if (before.code !== 0 || after.code !== 0) throw new Error("Cannot read undo contents")
+                  if (
+                    ![before.text, after.text, text].some((value) => value.includes("\0") || value.includes("\ufffd"))
+                  )
+                    merged = Undo.merge(before.text, after.text, text)
+                }
+                if (
+                  decision?.choice !== "overwrite" &&
+                  (expected === undefined || hash !== expected?.hash) &&
+                  merged === undefined
+                ) {
+                  conflicts.push({ file: change.file, action: desired ? "restore" : "delete", token })
+                  continue
+                }
+                plans.push({ change, current, merged, desired })
+              }
+              // No file or transcript changes until every conflict has a decision.
+              if (conflicts.length) return yield* new Undo.ConflictError({ conflicts })
+              for (const plan of plans) {
+                const current = (yield* exists(plan.change.file))
+                  ? yield* fs.readFile(plan.change.file).pipe(Effect.orDie)
+                  : undefined
+                if (
+                  Buffer.compare(Buffer.from(current ?? []), Buffer.from(plan.current ?? [])) !== 0 ||
+                  !!current !== !!plan.current
+                )
+                  throw new Error("File changed during undo; retry")
+              }
+              for (const plan of plans) {
+                if (!plan.desired) {
+                  if (plan.current) yield* fs.remove(plan.change.file).pipe(Effect.orDie)
+                  continue
+                }
+                if (plan.merged !== undefined) {
+                  yield* fs.writeFileString(plan.change.file, plan.merged).pipe(Effect.orDie)
+                  continue
+                }
+                const result = yield* git(
+                  [
+                    ...core,
+                    ...args([
+                      "checkout",
+                      plan.change.desired!,
+                      "--",
+                      `:(literal)${path.relative(state.worktree, plan.change.file)}`,
+                    ]),
+                  ],
+                  { cwd: state.worktree },
+                )
+                if (result.code !== 0) throw new Error("Failed to restore undo file")
+              }
+            }),
+          )
+        })
+
         const revert = Effect.fnUntraced(function* (patches: Patch[]) {
           return yield* locked(
             Effect.gen(function* () {
@@ -765,11 +889,14 @@ const layer: Layer.Layer<Service, never, FSUtil.Service | AppProcess.Service | C
           Effect.forkScoped,
         )
 
-        return { cleanup, track, patch, restore, revert, diff, diffFull }
+        return { cleanup, track, patch, restore, revert, reconcile, diff, diffFull }
       }),
     )
 
     return Service.of({
+      reconcile: Effect.fn("Snapshot.reconcile")(function* (changes, decisions) {
+        return yield* InstanceState.useEffect(state, (s) => s.reconcile(changes, decisions))
+      }),
       init: Effect.fn("Snapshot.init")(function* () {
         yield* InstanceState.get(state)
       }),

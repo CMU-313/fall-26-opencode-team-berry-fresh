@@ -2,6 +2,7 @@ import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { Effect, Layer, Context, Schema } from "effect"
 import { SessionV1 } from "@opencode-ai/core/v1/session"
 import { EventV2Bridge } from "@/event-v2-bridge"
+import { Undo } from "../snapshot/undo"
 import { Snapshot } from "../snapshot"
 import { Storage } from "@/storage/storage"
 import { Session } from "./session"
@@ -14,12 +15,15 @@ export const RevertInput = Schema.Struct({
   sessionID: SessionID,
   messageID: MessageID,
   partID: Schema.optional(PartID),
+  decisions: Schema.optional(Schema.Array(Undo.Decision)),
 })
 export type RevertInput = Schema.Schema.Type<typeof RevertInput>
 
 export interface Interface {
-  readonly revert: (input: RevertInput) => Effect.Effect<Session.Info, Session.BusyError>
-  readonly unrevert: (input: { sessionID: SessionID }) => Effect.Effect<Session.Info, Session.BusyError>
+  readonly revert: (input: RevertInput) => Effect.Effect<Session.Info, Session.BusyError | Undo.ConflictError>
+  readonly unrevert: (input: {
+    sessionID: SessionID
+  }) => Effect.Effect<Session.Info, Session.BusyError | Undo.ConflictError>
   readonly cleanup: (session: Session.Info) => Effect.Effect<void>
 }
 
@@ -42,13 +46,11 @@ const layer = Layer.effect(
       const session = yield* sessions.get(input.sessionID).pipe(Effect.orDie)
 
       let rev: Session.Info["revert"]
-      const patches: Snapshot.Patch[] = []
       for (const msg of all) {
         if (msg.info.role === "user") lastUser = msg.info
         const remaining = []
         for (const part of msg.parts) {
           if (rev) {
-            if (part.type === "patch") patches.push(part)
             continue
           }
 
@@ -67,9 +69,36 @@ const layer = Layer.effect(
 
       if (!rev) return session
 
-      rev.snapshot = session.revert?.snapshot ?? (yield* snap.track())
-      if (session.revert?.snapshot) yield* snap.restore(session.revert.snapshot)
-      yield* snap.revert(patches)
+      const parts = all.flatMap((message) => message.parts)
+      const patchesAfter = (boundary: NonNullable<Session.Info["revert"]>) => {
+        const message = all.findIndex((item) => item.info.id === boundary.messageID)
+        return all
+          .slice(message)
+          .flatMap((item, i) =>
+            item.parts.slice(
+              i === 0 && boundary.partID ? item.parts.findIndex((part) => part.id === boundary.partID) : 0,
+            ),
+          )
+          .filter((part) => part.type === "patch")
+      }
+      const previous = session.revert ? patchesAfter(session.revert) : []
+      const next = patchesAfter(rev)
+      const files = Array.from(new Set([...previous, ...next].flatMap((patch) => patch.files)))
+      const changes = files.map((file) => {
+        const prior = previous.find((patch) => patch.files.includes(file))
+        const target = next.find((patch) => patch.files.includes(file))
+        const last = parts.filter((part) => part.type === "patch" && part.files.includes(file)).at(-1)
+        // Old transcripts may have a step-finish snapshot but no patch.after.
+        const finish = last ? parts[parts.indexOf(last) - 1] : undefined
+        const after =
+          last?.type === "patch"
+            ? (last.after ?? (finish?.type === "step-finish" ? finish.snapshot : undefined))
+            : undefined
+        return { file, expected: prior?.hash ?? after, desired: target?.hash ?? after }
+      })
+      const original = session.revert?.snapshot ?? (yield* snap.track())
+      yield* snap.reconcile(changes, input.decisions)
+      rev.snapshot = original
       if (rev.snapshot) rev.diff = yield* snap.diff(rev.snapshot)
       const index = all.findIndex((msg) => msg.info.id === rev.messageID)
       const range = index < 0 ? [] : all.slice(index)
@@ -93,7 +122,22 @@ const layer = Layer.effect(
       yield* state.assertNotBusy(input.sessionID)
       const session = yield* sessions.get(input.sessionID).pipe(Effect.orDie)
       if (!session.revert) return session
-      if (session.revert.snapshot) yield* snap.restore(session.revert.snapshot)
+      if (session.revert.snapshot) {
+        const all = yield* sessions.messages({ sessionID: input.sessionID }).pipe(Effect.orDie)
+        const index = all.findIndex((item) => item.info.id === session.revert!.messageID)
+        const files = new Map<string, string>()
+        for (const [i, message] of all.slice(index).entries()) {
+          const start =
+            i === 0 && session.revert.partID ? message.parts.findIndex((part) => part.id === session.revert!.partID) : 0
+          for (const part of message.parts.slice(start)) {
+            if (part.type !== "patch") continue
+            for (const file of part.files) if (!files.has(file)) files.set(file, part.hash)
+          }
+        }
+        yield* snap.reconcile(
+          Array.from(files, ([file, expected]) => ({ file, expected, desired: session.revert!.snapshot })),
+        )
+      }
       yield* sessions.clearRevert(input.sessionID)
       return yield* sessions.get(input.sessionID).pipe(Effect.orDie)
     })

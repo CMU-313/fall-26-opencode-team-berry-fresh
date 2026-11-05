@@ -463,6 +463,7 @@ const layer = Layer.effect(
                   sessionID: ctx.sessionID,
                   type: "patch",
                   hash: patch.hash,
+                  after: completedSnapshot,
                   files: patch.files,
                 })
               }
@@ -546,6 +547,7 @@ const layer = Layer.effect(
               sessionID: ctx.sessionID,
               type: "patch",
               hash: patch.hash,
+              after: yield* snapshot.track(),
               files: patch.files,
             })
           }
