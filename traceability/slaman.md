@@ -1,0 +1,33 @@
+# Traceability: Sara Laman (slaman)
+
+**Target feature:** Learning mode (read-only parts): the Tutor agent's permission policy and how the `/explain` command sends requests to Tutor. This covers which actions Tutor can and can't take, how you enter and leave Tutor, and how `/explain` arguments are handled. The wording of explanations and quiz questions is out of scope because it comes from the model and changes between runs.
+
+**Files or modules that implement it:**
+
+- `packages/opencode/src/agent/agent.ts`: Tutor agent definition and permissions
+- `packages/opencode/src/command/index.ts`: `/explain` command registration
+- `packages/core/src/plugin/agent.ts`: core plugin version of Tutor
+- `packages/core/src/plugin/command.ts`: core plugin version of `/explain`
+
+## Requirements
+
+| ID | Interview evidence | Requirement | Acceptance Criteria | Changed in P4? | Property (kind) | Test |
+|---|---|---|---|---|---|---|
+| R1 | C-7–C-8: “I would never ever want to see it edit my files”<br>S-6–S-7: “never want it to be able to change any code, documentation, or tests”<br>O-4–O-5: “never alter code or certainly delete files” | Tutor must never be able to create, edit, or overwrite files. | With default settings, the edit, write, and apply_patch tools all evaluate to deny for Tutor (e.g., editing src/index.ts → deny). | No | — | — |
+| R2 | O-7–O-8: doesn't want it “to ask me for permission to do things like search or find” | Tutor must be able to read and search project files without asking for permission, except `.env`-style secret files, which ask first exactly as they do for Build. | For Tutor, read, grep, glob, and list each evaluate to allow for a non-secret file inside the project (e.g., reading src/index.ts → allow). Reading `.env` or `config.env.local` evaluates to ask, the same as Build; `.env.example` → allow. | Yes | — | — |
+| R3 | C-10–C-12: “running those commands, no”<br>C-22–C-23: “could have still committed and pushed something up to the repository” | Tutor must not run any shell commands, including git commands. | For Tutor, ls, bun test, git commit -m x, and git push each evaluate to deny. | No | — | — |
+| R4 | C-13–C-14: “people shouldn't be able to make Tutor into a regular agent”<br>O-9–O-12: “the Tutor settings should win… you can't modify or delete files and you're safe” | The user's global permission settings must never loosen Tutor's edit, write, apply_patch, or bash permissions to allow, but may still make Tutor stricter. | With opencode.json set to {"permission": {"bash": "allow", "edit": "allow"}}, bash and edit still evaluate to deny for Tutor. Bash still evaluates to allow for Build. A global rule that denies a tool Tutor normally allows (e.g., "grep": "deny") still applies to Tutor. | Yes | — | — |
+| R5 | C-10: “pulling documentation from the web, yes”<br>S-11–S-12: “fine for it to pull relevant information from the internet” | Tutor must be able to fetch documentation from the web. | For Tutor, webfetch evaluates to allow. Edit and bash still evaluate to deny. | No | — | — |
+| R6 | C-17–C-18: “should be the same for any situation”<br>S-16–S-17: “expect the output to be the same in all scenarios”<br>O-21–O-23: “the user should know that they are getting the same thing” | Tutor's permissions must be identical no matter how Tutor is entered. | /explain, /explain src/a.ts, /explain src/a.ts src/b, /explain src/b src/a.ts, and selecting Tutor with Tab are all directly handled by the tutor agent with an identical set of permissions. | No | — | — |
+| R7 | C-14: “the whole chat is not modified”<br>S-13–S-14: “like to see the same conversation when I switch back to Build” | Switching from Tutor back to Build must keep the conversation history intact. | After /explain src/index.ts (for example), switching to Build and sending a prompt in the same session keeps every earlier Tutor message, in order and unchanged. | No | — | — |
+
+Properties written or suggested by opencode or another AI tool: none yet.
+
+## Requirement changes
+
+| ID | Original requirement (P3) | Revised requirement | Why it changed |
+|---|---|---|---|
+| R2 | Tutor must be able to read and search files without asking for permission.<br>Acceptance criteria: For Tutor, read, grep, glob, and list each evaluate to allow (not ask) for a file inside the project (e.g., reading src/index.ts → allow). | Tutor must be able to read and search project files without asking for permission, except `.env`-style secret files (`*.env`, `*.env.*`, but not `*.env.example`), which ask first exactly as they do for Build. | **Conflict** with an existing security constraint. Build already asks before reading `.env` files because they usually hold API keys and passwords. Tutor is read-only, but anything it reads is still sent to the model provider and shown in the chat, so a blanket "never ask" would let Tutor leak secrets that Build protects. Read-only protects files from being changed, not from being exposed. The interview need (O-7–O-8: no permission prompts for routine searching and finding) is unchanged for every normal project file. |
+| R4 | The user's global permission settings must not override Tutor's read-only permissions. | The user's global permission settings must never loosen Tutor's edit, write, apply_patch, or bash permissions to allow, but may still make Tutor stricter. | **Checkability and conflict.** "Must not override" was ambiguous: read literally, Tutor would also ignore a user who sets a global rule to make it *stricter* (e.g., denying a tool), which would work against the safety the interviewees asked for. The interviewees' concern (C-13–C-14, O-9–O-12) was that settings could turn Tutor into an agent that edits files or runs commands, so the revision states exactly which permissions can't be loosened and checks that direction. |
+
+R1, R3, R5, R6, and R7 are kept as written. Each one names exact tools or actions with an expected allow/deny result (or, for R6 and R7, a concrete scenario to compare), so they can be built and checked as stated.
