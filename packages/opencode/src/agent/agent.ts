@@ -117,6 +117,14 @@ const layer = Layer.effect(
           ...Object.fromEntries(whitelistedDirs.map((dir) => [dir, "allow"])),
         } satisfies Record<string, "allow" | "ask" | "deny">
 
+        // mirrors github.com/github/gitignore Node.gitignore pattern for .env files
+        const read = {
+          "*": "allow",
+          "*.env": "ask",
+          "*.env.*": "ask",
+          "*.env.example": "allow",
+        } satisfies Record<string, "allow" | "ask" | "deny">
+
         const defaults = Permission.fromConfig({
           "*": "allow",
           doom_loop: "ask",
@@ -127,13 +135,7 @@ const layer = Layer.effect(
           question: "deny",
           plan_enter: "deny",
           plan_exit: "deny",
-          // mirrors github.com/github/gitignore Node.gitignore pattern for .env files
-          read: {
-            "*": "allow",
-            "*.env": "ask",
-            "*.env.*": "ask",
-            "*.env.example": "allow",
-          },
+          read,
         })
 
         const user = Permission.fromConfig(cfg.permission ?? {})
@@ -188,11 +190,12 @@ const layer = Layer.effect(
               defaults,
               Permission.fromConfig({
                 "*": "deny",
-                read: "allow",
+                read,
                 grep: "allow",
                 glob: "allow",
                 list: "allow",
                 question: "allow",
+                webfetch: "allow",
                 task: {
                   "*": "deny",
                   explore: "allow",
@@ -200,6 +203,8 @@ const layer = Layer.effect(
                 external_directory: readonlyExternalDirectory,
               }),
               user,
+              // global config may tighten tutor but never re-enable file edits or shell commands
+              Permission.fromConfig({ edit: "deny", bash: "deny" }),
             ),
             prompt: PROMPT_TUTOR,
             mode: "primary",
