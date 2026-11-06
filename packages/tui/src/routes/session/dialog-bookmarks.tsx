@@ -47,8 +47,7 @@ export function DialogBookmarks(props: { sessionID: string; onSelect: (messageID
             },
           },
         ]
-      })
-      .toReversed(),
+      }),
   )
 
   return (

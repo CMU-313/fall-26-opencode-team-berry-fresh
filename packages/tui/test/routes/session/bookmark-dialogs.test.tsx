@@ -196,7 +196,7 @@ test("bookmark picker selects the highlighted prompt", async () => {
   try {
     await waitFor(() => mounted.app.captureCharFrame().includes("Newest saved prompt"))
     mounted.app.mockInput.pressEnter()
-    expect(selected).toEqual(["message-3"])
+    expect(selected).toEqual(["message-1"])
   } finally {
     mounted.app.renderer.destroy()
   }
@@ -213,8 +213,8 @@ test("bookmark picker removes the highlighted prompt with Ctrl+D", async () => {
   try {
     await waitFor(() => mounted.app.captureCharFrame().includes("Newest saved prompt"))
     mounted.app.mockInput.pressKey("d", { ctrl: true })
-    await waitFor(() => !getBookmarks(mounted.kv, sessionID).includes("message-3"))
-    expect(getBookmarks(mounted.kv, sessionID)).toEqual(["message-1"])
+    await waitFor(() => !getBookmarks(mounted.kv, sessionID).includes("message-1"))
+    expect(getBookmarks(mounted.kv, sessionID)).toEqual(["message-3"])
   } finally {
     mounted.app.renderer.destroy()
   }
