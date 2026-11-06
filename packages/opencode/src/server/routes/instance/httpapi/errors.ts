@@ -1,3 +1,4 @@
+import { Undo } from "@/snapshot/undo"
 import { Schema } from "effect"
 
 export class InvalidRequestError extends Schema.TaggedErrorClass<InvalidRequestError>()(
@@ -191,3 +192,11 @@ export function notFound(message: string) {
     data: { message },
   })
 }
+
+export class UndoConflictError extends Schema.TaggedErrorClass<UndoConflictError>()(
+  "UndoConflictError",
+  {
+    conflicts: Schema.Array(Undo.Conflict),
+  },
+  { httpApiStatus: 409 },
+) {}

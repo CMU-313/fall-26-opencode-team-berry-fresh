@@ -586,6 +586,7 @@ export type PatchPart = {
   messageID: string
   type: "patch"
   hash: string
+  after?: string
   files: Array<string>
 }
 
@@ -2599,6 +2600,15 @@ export type SessionBusyError = {
   _tag: "SessionBusyError"
   sessionID: string
   message: string
+}
+
+export type UndoConflictError = {
+  _tag: "UndoConflictError"
+  conflicts: Array<{
+    file: string
+    action: "restore" | "delete"
+    token: string
+  }>
 }
 
 export type EventTuiPromptAppend = {
@@ -10292,6 +10302,11 @@ export type SessionRevertData = {
   body?: {
     messageID: string
     partID?: string
+    decisions?: Array<{
+      file: string
+      token: string
+      choice: "keep" | "overwrite"
+    }>
   }
   path: {
     sessionID: string
@@ -10313,9 +10328,9 @@ export type SessionRevertErrors = {
    */
   404: NotFoundError
   /**
-   * SessionBusyError
+   * SessionBusyError | UndoConflictError
    */
-  409: SessionBusyError
+  409: SessionBusyError | UndoConflictError
 }
 
 export type SessionRevertError = SessionRevertErrors[keyof SessionRevertErrors]
@@ -10351,9 +10366,9 @@ export type SessionUnrevertErrors = {
    */
   404: NotFoundError
   /**
-   * SessionBusyError
+   * SessionBusyError | UndoConflictError
    */
-  409: SessionBusyError
+  409: SessionBusyError | UndoConflictError
 }
 
 export type SessionUnrevertError = SessionUnrevertErrors[keyof SessionUnrevertErrors]

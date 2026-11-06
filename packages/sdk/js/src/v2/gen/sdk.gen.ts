@@ -4265,6 +4265,11 @@ export class Session2 extends HeyApiClient {
       workspace?: string
       messageID?: string
       partID?: string
+      decisions?: Array<{
+        file: string
+        token: string
+        choice: "keep" | "overwrite"
+      }>
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -4278,6 +4283,7 @@ export class Session2 extends HeyApiClient {
             { in: "query", key: "workspace" },
             { in: "body", key: "messageID" },
             { in: "body", key: "partID" },
+            { in: "body", key: "decisions" },
           ],
         },
       ],

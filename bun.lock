@@ -968,6 +968,7 @@
         "@tsconfig/bun": "catalog:",
         "@types/bun": "catalog:",
         "@typescript/native-preview": "catalog:",
+        "fast-check": "4.10.2",
       },
     },
     "packages/ui": {
