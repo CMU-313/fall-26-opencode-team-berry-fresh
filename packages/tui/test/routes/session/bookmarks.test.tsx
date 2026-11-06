@@ -68,10 +68,10 @@ test("bookmarks persist per session and can be removed", async () => {
   await rm(state, { recursive: true, force: true })
 })
 
-test("bookmark lists follow message order and ignore removed messages", () => {
+test("bookmark lists follow bookmark order and ignore removed messages", () => {
   const messages = [{ id: "message-1" }, { id: "message-2" }, { id: "message-3" }]
   expect(bookmarkedMessages(["message-3", "removed", "message-1"], messages)).toEqual([
-    messages[0],
     messages[2],
+    messages[0],
   ])
 })

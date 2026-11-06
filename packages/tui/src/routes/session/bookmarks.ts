@@ -1,6 +1,6 @@
 import type { useKV } from "../../context/kv"
 
-type KV = ReturnType<typeof useKV>
+type KV = Pick<ReturnType<typeof useKV>, "ready" | "get" | "set">
 
 export function getBookmarks(kv: KV, sessionID: string) {
   const value: unknown = kv.get(`session_bookmarks:${sessionID}`)
@@ -17,6 +17,9 @@ export function toggleBookmark(kv: KV, sessionID: string, messageID: string) {
 }
 
 export function bookmarkedMessages<T extends { id: string }>(ids: readonly string[], messages: readonly T[]) {
-  const saved = new Set(ids)
-  return messages.filter((message) => saved.has(message.id))
+  const messagesByID = new Map(messages.map((message) => [message.id, message]))
+  return [...new Set(ids)].flatMap((id) => {
+    const message = messagesByID.get(id)
+    return message ? [message] : []
+  })
 }
