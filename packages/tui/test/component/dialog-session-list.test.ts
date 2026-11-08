@@ -6,6 +6,9 @@ import {
   orderByRecency,
 } from "../../src/component/dialog-session-list"
 
+// Fixed seed so Stryker runs see the same generated inputs every time.
+fc.configureGlobal({ seed: 42 })
+
 describe("dialog session list", () => {
   test("requests root sessions for the default browse list", () => {
     expect(createDialogSessionListQuery({ filter: { path: "packages/tui" } })).toEqual({

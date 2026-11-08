@@ -45,3 +45,25 @@ Properties written or suggested by opencode or another AI tool: R1, R2, R3, R4 (
 | H2 | R2 | `orderByRecency`: comparator `b - a` → `b > a ? 1 : 0`, which never moves a newer session ahead of an older one | R2 property: random update times often put an older session first | Killed: `[[0, 1], 0]` stayed 0, 1 |
 | H3 | R3 | `createDialogSessionListQuery`: `search ? 30 : 100` → `search ? 100 : 30`, so browsing loads only 30 sessions | R3 property: any count over 30 should show more than 30 | Killed: `[31]` showed 30 |
 | H4 | R4 | `loadDialogSessionList`: a rejected request returns `[]` instead of `undefined`, so the popup shows nothing instead of the sessions it already has | R4 property: it expects `undefined` on every failure | Killed: `["", {}, true]` returned `[]` |
+
+## Stryker comparison
+
+**Config:** `packages/tui/stryker.vpak.config.json`
+
+**fast-check seed:** 42
+
+**Mutation score:** 82.35% (14 killed, 3 survived, 0 timeouts, 17 mutants)
+
+**Report:** `mutants/vpak/mutation.html`
+
+### Which of your hand-written mutants did Stryker never generate? Why not?
+
+Stryker never generated H4 because its ArrowFunction mutator only replaces a function body with `undefined`, and the failure handler in `loadDialogSessionList` already returns `undefined`, so it never tried a different return value like `[]`.
+
+### Which Stryker survivors would you never have thought of? Are any of them bugs a real developer might plausibly write?
+
+The mutants that survived were primarily related to boolean value flipping. Given how trivial a bug like this is, I thought it was unusual for these to survive. On the flip side, I also think that this type of bug is slightly less realistic, since determining whether an option should be set to true/false seems to a be more deliberate choice that developers will take more time to think about.
+
+### What does each approach find that the other doesn't?
+
+Since Stryker is automated, its mutations seem to be more thorough and numerous, increasing the likelihood of catching gaps in the tests. It generates mutants that developers may not think about, since developers can get tunnel vision and end up generating mutants that cover a narrow scope. However, the merit of manual mutant creation is that developers can come up with mutants that they believe are realistic, or ones that they think are more likely to be created. Stryker may not necessarily come up with realistic mutants.
