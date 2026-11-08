@@ -1,0 +1,13 @@
+diff --git a/packages/tui/src/component/dialog-session-list.tsx b/packages/tui/src/component/dialog-session-list.tsx
+index 41b5a74..60eb977 100644
+--- a/packages/tui/src/component/dialog-session-list.tsx
++++ b/packages/tui/src/component/dialog-session-list.tsx
+@@ -37,7 +37,7 @@ export function loadDialogSessionList<T>(input: {
+   list: (query: ReturnType<typeof createDialogSessionListQuery>) => Promise<{ data?: T[] }>
+ }) {
+   return input.list(createDialogSessionListQuery(input)).then(
+-    (result) => result.data,
++    (result) => result.data ?? [],
+     () => undefined,
+   )
+ }

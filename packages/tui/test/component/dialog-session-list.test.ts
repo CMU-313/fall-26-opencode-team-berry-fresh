@@ -72,38 +72,118 @@ describe("dialog session list", () => {
 
   // R2: By default, sessions are listed newest first, by when each was last active.
   // Kind: metamorphic
-  // Generators: 1-20 unique update times so ordering is never a tie, and any index to mark as newly active.
+  // Generators: 1-20 unique update times so ordering is never a tie, 0-5 sub-agent sessions at any time (the cached
+  // list the popup falls back to includes them), and any index to mark as newly active.
   test("R2: sessions are newest first, and the one used last moves to the top", () => {
     fc.assert(
-      fc.property(fc.uniqueArray(fc.nat(), { minLength: 1, maxLength: 20 }), fc.nat(), (times, pick) => {
-        const sessions = times.map((updated, i) => ({ id: `s${i}`, time: { updated } }))
-        const before = orderByRecency(sessions)
-        expect(before).toEqual(sessions.toSorted((a, b) => b.time.updated - a.time.updated).map((s) => s.id))
-        const active = sessions[pick % sessions.length]
-        const after = orderByRecency(
-          sessions.map((s) => (s === active ? { ...s, time: { updated: Math.max(...times) + 1 } } : s)),
-        )
-        expect(after).toEqual([active.id, ...before.filter((id) => id !== active.id)])
-      }),
+      fc.property(
+        fc.uniqueArray(fc.nat(), { minLength: 1, maxLength: 20 }),
+        fc.array(fc.nat(), { maxLength: 5 }),
+        fc.nat(),
+        (times, childTimes, pick) => {
+          const sessions = times.map((updated, i) => ({ id: `s${i}`, time: { updated } }))
+          // Sub-agent sessions belong to a root session and are never listed on their own.
+          const children = childTimes.map((updated, i) => ({ id: `c${i}`, parentID: "s0", time: { updated } }))
+          const before = orderByRecency([...sessions, ...children])
+          expect(before).toEqual(sessions.toSorted((a, b) => b.time.updated - a.time.updated).map((s) => s.id))
+          const active = sessions[pick % sessions.length]
+          const after = orderByRecency([
+            ...sessions.map((s) => (s === active ? { ...s, time: { updated: Math.max(...times) + 1 } } : s)),
+            ...children,
+          ])
+          expect(after).toEqual([active.id, ...before.filter((id) => id !== active.id)])
+        },
+      ),
     )
   })
 
   // R3: /sessions lists the current project's 100 most recently active sessions, each exactly once, newest first.
   // Older sessions can be found by searching (R1).
   // Kind: model / oracle
-  // Generators: 0-250 sessions, covering the empty list, the 100 default boundary, and the 250 in the acceptance test.
+  // Generators: 0-250 sessions, covering the empty list, the 100 default boundary, and the 250 in the acceptance test,
+  // plus 0-20 sub-agent sessions that are newer than all of them.
   test("R3: the list shows the 100 newest sessions, each once, newest first", async () => {
     await fc.assert(
-      fc.asyncProperty(fc.integer({ min: 0, max: 250 }), async (count) => {
+      fc.asyncProperty(fc.integer({ min: 0, max: 250 }), fc.integer({ min: 0, max: 20 }), async (count, childCount) => {
         const newestFirst = Array.from({ length: count }, (_, i) => ({ id: `s${i}`, time: { updated: count - i } }))
-        // The server returns the newest sessions, up to the limit the query asks for.
+        const children = Array.from({ length: childCount }, (_, i) => ({
+          id: `c${i}`,
+          parentID: "s0",
+          time: { updated: count + childCount - i },
+        }))
+        // The server returns the newest sessions, only root sessions when the query asks, up to the query's limit.
         const loaded = await loadDialogSessionList({
           filter: {},
-          list: async (query) => ({ data: newestFirst.slice(0, query.limit) }),
+          list: async (query) => ({
+            data: [...children, ...newestFirst]
+              .filter((s) => !query.roots || !("parentID" in s))
+              .slice(0, query.limit),
+          }),
         })
         // Oracle: the IDs of the 100 newest sessions, newest first.
         expect(orderByRecency(loaded ?? [])).toEqual(newestFirst.slice(0, 100).map((s) => s.id))
       }),
+    )
+  })
+
+  // R3: Verify /sessions lists the 100 most recent sessions, each exactly once, newest first.
+  // This property test ensures that the sessions list contains exactly 100 sessions when there are at least 100,
+  // each with unique IDs, and ordered by recency (newest first).
+  // Kind: invariant
+  // Generators: session counts covering empty, partial, and full boundaries (0-150 sessions)
+  test("opencode R3: sessions are limited to 100 newest, each unique, newest first", async () => {
+    await fc.assert(
+      fc.asyncProperty(fc.integer({ min: 0, max: 150 }), async (count) => {
+        const sessions = Array.from({ length: count }, (_, i) => (
+          { id: `session-${i}`, time: { updated: count - i } }
+        ))
+        const loaded = await loadDialogSessionList({
+          filter: {},
+          list: async (query) => ({
+            data: sessions
+              .filter((s) => !query.roots || !("parentID" in s))
+              .slice(0, query.limit),
+          }),
+        })
+        // Verify we have at most 100 sessions
+        expect(loaded?.length).toBeLessThanOrEqual(100)
+        // Verify all IDs are unique
+        const ids = loaded?.map(s => s.id) || []
+        expect(new Set(ids).size).toBe(ids.length)
+        // Verify order is newest first (larger time.updated comes first)
+        for (let i = 1; i < (loaded?.length || 0); i++) {
+          expect(loaded![i-1].time.updated).toBeGreaterThanOrEqual(loaded![i].time.updated)
+        }
+        // When there are more than 100 sessions, verify we have exactly 100
+        if (count > 100) {
+          expect(loaded?.length).toBe(100)
+        }
+      }),
+    )
+  })
+
+  // R3: Strengthened version of the opencode property above (agent failure case).
+  // Kind: model / oracle
+  // Generators: 0-150 sessions with shuffled unique update times, so sessions never arrive already sorted.
+  test("opencode R3 (strengthened): the list shows the 100 newest sessions, newest first", async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        fc
+          .integer({ min: 0, max: 150 })
+          .chain((count) => fc.shuffledSubarray([...Array(count).keys()], { minLength: count, maxLength: count })),
+        async (times) => {
+          const sessions = times.map((updated, i) => ({ id: `session-${i}`, time: { updated } }))
+          // Update times are 0 to count - 1, so the newest N sessions have times >= count - N.
+          const newest = (n: number) => sessions.filter((s) => s.time.updated >= times.length - n)
+          // The server returns the newest sessions up to the query's limit, in no particular order.
+          const loaded = await loadDialogSessionList({ filter: {}, list: async (query) => ({ data: newest(query.limit) }) })
+          expect(orderByRecency(loaded ?? [])).toEqual(
+            newest(100)
+              .toSorted((a, b) => b.time.updated - a.time.updated)
+              .map((s) => s.id),
+          )
+        },
+      ),
     )
   })
 
