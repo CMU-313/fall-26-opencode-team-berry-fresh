@@ -1,0 +1,138 @@
+
+Attention:
+Turborepo now collects completely anonymous telemetry regarding usage.
+This information is used to shape the Turborepo roadmap and prioritize features.
+You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:
+https://turborepo.dev/docs/telemetry
+
+• turbo 2.10.2
+
+   • Packages in scope: @opencode-ai/app, @opencode-ai/cli, @opencode-ai/client, @opencode-ai/codemode, @opencode-ai/console-app, @opencode-ai/console-core, @opencode-ai/console-function, @opencode-ai/console-mail, @opencode-ai/console-resource, @opencode-ai/console-support, @opencode-ai/core, @opencode-ai/desktop, @opencode-ai/effect-drizzle-sqlite, @opencode-ai/effect-sqlite-node, @opencode-ai/enterprise, @opencode-ai/function, @opencode-ai/http-recorder, @opencode-ai/httpapi-codegen, @opencode-ai/llm, @opencode-ai/plugin, @opencode-ai/protocol, @opencode-ai/schema, @opencode-ai/script, @opencode-ai/sdk, @opencode-ai/sdk-next, @opencode-ai/server, @opencode-ai/session-ui, @opencode-ai/slack, @opencode-ai/stats-app, @opencode-ai/stats-core, @opencode-ai/stats-server, @opencode-ai/storybook, @opencode-ai/tui, @opencode-ai/ui, @opencode-ai/web, opencode
+   • Running test in 36 packages
+   • Remote caching disabled
+
+::group::@opencode-ai/http-recorder:build
+cache miss, executing b95cdc3c32ef595f
+$ bun ./script/build.ts
+::endgroup::
+::group::@opencode-ai/ui:test
+cache miss, executing 1ee45bc43a017e7c
+$ bun test src --only-failures
+bun test v1.3.14 (0d9b296a)
+
+ 27 pass
+ 0 fail
+ 38 expect() calls
+Ran 27 tests across 4 files. [99.00ms]
+::endgroup::
+::group::@opencode-ai/plugin:build
+cache miss, executing e28fe7d8816ab8f5
+$ tsc
+::endgroup::
+::group::@opencode-ai/ui:build
+cache miss, executing 17b842d20bc458b5
+$ rm -rf dist && tsc -p tsconfig.build.json
+::endgroup::
+::group::@opencode-ai/sdk:build
+cache miss, executing ef050a5929d7c7d9
+$ bun ./script/build.ts
+$ bun run --conditions=browser ./src/index.ts generate
+[95m[@hey-api/sdk] `instance` is deprecated. Use `operations: { strategy: "single", containerName: "OpencodeClient", methods: "instance" }` instead.[39m
+[90m@hey-api/openapi-ts v0.90.10[39m
+
+[90m[Job 1] [39m⏳ [36mGenerating from 1 input:[39m
+[90m[Job 1] [39m[36m  [1] [39m./openapi.json
+[90m[Job 1] [39m[32m✅ Done![39m Your output is in [96m/Users/sanjithagovindan/Documents/CMU/17313/fall-26-opencode-team-berry-fresh/packages/sdk/js/src/v2/gen[39m
+src/gen/client.gen.ts 37ms (unchanged)
+src/gen/client/client.gen.ts 17ms (unchanged)
+src/gen/client/index.ts 2ms (unchanged)
+src/gen/client/types.gen.ts 9ms (unchanged)
+src/gen/client/utils.gen.ts 17ms (unchanged)
+src/gen/core/auth.gen.ts 2ms (unchanged)
+src/gen/core/bodySerializer.gen.ts 5ms (unchanged)
+src/gen/core/params.gen.ts 5ms (unchanged)
+src/gen/core/pathSerializer.gen.ts 7ms (unchanged)
+src/gen/core/queryKeySerializer.gen.ts 4ms (unchanged)
+src/gen/core/serverSentEvents.gen.ts 7ms (unchanged)
+src/gen/core/types.gen.ts 3ms (unchanged)
+src/gen/core/utils.gen.ts 4ms (unchanged)
+src/gen/sdk.gen.ts 31ms (unchanged)
+src/gen/types.gen.ts 50ms (unchanged)
+src/v2/client.ts 34ms (unchanged)
+src/v2/data.ts 4ms (unchanged)
+src/v2/gen/client.gen.ts 2ms
+src/v2/gen/client/client.gen.ts 13ms
+src/v2/gen/client/index.ts 1ms
+src/v2/gen/client/types.gen.ts 6ms
+src/v2/gen/client/utils.gen.ts 16ms
+src/v2/gen/core/auth.gen.ts 2ms
+src/v2/gen/core/bodySerializer.gen.ts 4ms
+src/v2/gen/core/params.gen.ts 6ms
+src/v2/gen/core/pathSerializer.gen.ts 7ms
+src/v2/gen/core/queryKeySerializer.gen.ts 3ms
+src/v2/gen/core/serverSentEvents.gen.ts 8ms
+src/v2/gen/core/types.gen.ts 3ms
+src/v2/gen/core/utils.gen.ts 4ms
+src/v2/gen/sdk.gen.ts 115ms
+src/v2/gen/types.gen.ts 168ms
+src/v2/index.ts 1ms (unchanged)
+src/v2/server.ts 4ms (unchanged)
+::endgroup::
+::group::@opencode-ai/session-ui:test
+cache miss, executing af07f79d04657da0
+$ bun test src --only-failures
+bun test v1.3.14 (0d9b296a)
+
+ 83 pass
+ 0 fail
+ 186 expect() calls
+Ran 83 tests across 14 files. [174.00ms]
+::endgroup::
+[;31m@opencode-ai/app:test[;0m
+cache miss, executing cda54eadc0105482
+$ bun run test:unit && bun run test:browser
+$ bun test --conditions=solid --only-failures --preload ./happydom.ts ./src
+bun test v1.3.14 (0d9b296a)
+
+src/i18n/desktop-native.test.ts:
+118 |   })
+119 | 
+120 |   test("uses Unicode likely subtags for script-sensitive bundles", () => {
+121 |     expect(detectDesktopNativeLocale(["zh-TW"])).toBe("zht")
+122 |     expect(detectDesktopNativeLocale(["zh-SG"])).toBe("zh")
+123 |     expect(detectDesktopNativeLocale(["pa-PK"])).toBe("pa")
+                                                       ^
+error: expect(received).toBe(expected)
+
+Expected: "pa"
+Received: "en"
+
+      at <anonymous> (/Users/sanjithagovindan/Documents/CMU/17313/fall-26-opencode-team-berry-fresh/packages/app/src/i18n/desktop-native.test.ts:123:50)
+(fail) desktop native locale detection > uses Unicode likely subtags for script-sensitive bundles [1.18ms]
+
+ 722 pass
+ 1 fail
+ 3021 expect() calls
+Ran 723 tests across 105 files. [1.70s]
+error: script "test:unit" exited with code 1
+error: script "test" exited with code 1
+::group::@opencode-ai/core:test
+cache miss, executing 12208dcdb8575a78
+$ bun test --only-failures
+bun test v1.3.14 (0d9b296a)
+::endgroup::
+::group::opencode:test
+cache miss, executing 20665486755169c7
+$ bun test --timeout 30000 --only-failures
+bun test v1.3.14 (0d9b296a)
+::endgroup::
+::error::@opencode-ai/app#test: command (/Users/sanjithagovindan/Documents/CMU/17313/fall-26-opencode-team-berry-fresh/packages/app) /Users/sanjithagovindan/.bun/bin/bun run test exited (1)
+ ERROR  @opencode-ai/app#test: command (/Users/sanjithagovindan/Documents/CMU/17313/fall-26-opencode-team-berry-fresh/packages/app) /Users/sanjithagovindan/.bun/bin/bun run test exited (1)
+
+ Tasks:    6 successful, 9 total
+Cached:    0 cached, 9 total
+  Time:    8.734s 
+Failed:    @opencode-ai/app#test
+
+ ERROR  run failed: command  exited (1)
+error: "turbo" exited with code 1

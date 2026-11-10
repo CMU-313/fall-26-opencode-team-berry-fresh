@@ -1,0 +1,17 @@
+# Incomplete undo (R4): leave agent-created files behind.
+# Undo reports success, making the omitted deletion easy to overlook.
+
+## I used AI to learn how to convert my mutant into the appropriate Typescript
+
+
+diff --git a/packages/opencode/src/snapshot/index.ts b/packages/opencode/src/snapshot/index.ts
+--- a/packages/opencode/src/snapshot/index.ts
++++ b/packages/opencode/src/snapshot/index.ts
+@@ -504,7 +504,6 @@
+               }
+               for (const plan of plans) {
+                 if (!plan.desired) {
+-                  if (plan.current) yield* fs.remove(plan.change.file).pipe(Effect.orDie)
+                   continue
+                 }
+                 if (plan.merged !== undefined) {

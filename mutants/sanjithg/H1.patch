@@ -1,0 +1,17 @@
+# Wrong-state comparison (R1): skip restoration by comparing against the agent's hash.
+# Easy to miss in review because both hashes represent valid file states.
+
+## I used AI to learn how to convert my mutant into the appropriate Typescript
+
+diff --git a/packages/opencode/src/snapshot/index.ts b/packages/opencode/src/snapshot/index.ts
+--- a/packages/opencode/src/snapshot/index.ts
++++ b/packages/opencode/src/snapshot/index.ts
+@@ -463,7 +463,7 @@
+                 if (desired === undefined) throw new Error("Missing undo target snapshot")
+                 if ([expected, desired].some((entry) => entry && !["100644", "100755"].includes(entry.mode)))
+                   throw new Error("Undo requires regular files")
+-                if (hash === desired?.hash) continue
++                if (hash === expected?.hash) continue
+                 const token = new Bun.CryptoHasher("sha256")
+                   .update(JSON.stringify([rel, hash, expected, desired]))
+                   .digest("hex")

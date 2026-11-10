@@ -1,0 +1,16 @@
+# Missing success feedback (R5): complete undo without the confirmation toast.
+# File-restoration tests still pass despite the missing user feedback.
+
+## I used AI to learn how to convert my mutant into the appropriate Typescript
+
+diff --git a/packages/tui/src/routes/session/undo.ts b/packages/tui/src/routes/session/undo.ts
+--- a/packages/tui/src/routes/session/undo.ts
++++ b/packages/tui/src/routes/session/undo.ts
+@@ -13,7 +13,6 @@
+   })
+   if (!reverted) return false
+   input.onReverted()
+-  input.toast.show({ message: "Reverted", variant: "success" })
+   return true
+ }
+ 

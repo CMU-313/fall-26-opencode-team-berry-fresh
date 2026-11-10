@@ -1,0 +1,18 @@
+# Wrong result written (R2): write original content instead of the merged result.
+# Looks correct until later manual edits need to be preserved.
+
+## I used AI to learn how to convert my mutant into the appropriate Typescript
+
+
+diff --git a/packages/opencode/src/snapshot/index.ts b/packages/opencode/src/snapshot/index.ts
+--- a/packages/opencode/src/snapshot/index.ts
++++ b/packages/opencode/src/snapshot/index.ts
+@@ -478,7 +478,7 @@
+                   if (
+                     ![before.text, after.text, text].some((value) => value.includes("\0") || value.includes("\ufffd"))
+                   )
+-                    merged = Undo.merge(before.text, after.text, text)
++                    merged = Undo.merge(before.text, after.text, text) === undefined ? undefined : after.text
+                 }
+                 if (
+                   decision?.choice !== "overwrite" &&
