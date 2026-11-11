@@ -20,6 +20,10 @@ const it = testEffect(
   ),
 )
 
+// Fixed seed so fast-check generates the same inputs on every run, and a mutant is
+// killed or survives the same way each time (P5 mutation testing).
+fc.configureGlobal({ seed: 42 })
+
 afterEach(async () => {
   await disposeAllInstances()
 })

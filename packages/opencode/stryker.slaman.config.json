@@ -1,0 +1,9 @@
+{
+  "testRunner": "command",
+  "commandRunner": { "command": "bun test --timeout 30000 test/learning-mode/learning-mode.property.test.ts" },
+  "mutate": ["src/agent/agent.ts:121-141", "src/agent/agent.ts:185-212"],
+  "coverageAnalysis": "off",
+  "concurrency": 2,
+  "timeoutMS": 60000,
+  "reporters": ["html", "clear-text", "progress"]
+}
