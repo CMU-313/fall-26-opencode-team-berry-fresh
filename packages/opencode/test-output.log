@@ -1,0 +1,102 @@
+$ bun test --timeout 30000 --only-failures
+bun test v1.4.2 (744846f84)
+
+test/config/config.test.ts:
+[04:26:31.311] INFO (#63126): creating instance {
+  directory: "/private/var/folders/h2/59fykg2n25x07v31vx44wh0h0000gn/T/opencode-test-ty880wrxl0n",
+}
+[04:26:31.311] INFO (#63126): fromDirectory {
+  directory: "/private/var/folders/h2/59fykg2n25x07v31vx44wh0h0000gn/T/opencode-test-ty880wrxl0n",
+}
+[04:26:31.359] INFO (#63048): loading {
+  path: "/var/folders/h2/59fykg2n25x07v31vx44wh0h0000gn/T/opencode-test-data-14046/config/opencode/config.json",
+}
+[04:26:31.359] INFO (#63048): loading {
+  path: "/var/folders/h2/59fykg2n25x07v31vx44wh0h0000gn/T/opencode-test-data-14046/config/opencode/opencode.json",
+}
+[04:26:31.359] INFO (#63048): loading {
+  path: "/var/folders/h2/59fykg2n25x07v31vx44wh0h0000gn/T/opencode-test-data-14046/config/opencode/opencode.jsonc",
+}
+[04:26:31.371] INFO (#63214): disposing all instances
+[04:26:31.371] INFO (#63214): disposing instance {
+  directory: "/private/var/folders/h2/59fykg2n25x07v31vx44wh0h0000gn/T/opencode-test-ty880wrxl0n",
+}
+
+test/provider/header-timeout.test.ts:
+42 |   const reader = res.body.getReader()
+43 |   const body = new ReadableStream<Uint8Array>({
+44 |     async pull(ctrl) {
+45 |       const part = await new Promise<Awaited<ReturnType<typeof reader.read>>>((resolve, reject) => {
+46 |         const id = setTimeout(() => {
+47 |           const err = new ProviderError.ResponseStreamError("SSE read timed out")
+                           ^
+ProviderResponseStreamError: SSE read timed out
+      at <anonymous> (/Users/sanjithagovindan/Documents/CMU/17313/fall-26-opencode-team-berry-fresh/packages/opencode/src/provider/provider.ts:47:23)
+(fail) chunkTimeout raises a response stream error when SSE body stalls [172.19ms]
+
+test/server/httpapi-v2-pty.test.ts:
+88 |       expect(found.status).toBe(200)
+89 |       info = Schema.decodeUnknownSync(Location.response(Pty.Info))(await found.json()).data
+90 |       if (info.status === "exited") break
+91 |       await new Promise((resolve) => setTimeout(resolve, 50))
+92 |     }
+93 |     expect(info).toMatchObject({ status: "exited", exitCode: 4 })
+                      ^
+error: expect(received).toMatchObject(expected)
+
+  {
+-   "exitCode": 4,
+-   "status": "exited",
++   "args": [
++     "sh",
++     "-c",
++     "exit 4",
++   ],
++   "command": "/usr/bin/env",
++   "cwd": "/private/var/folders/h2/59fykg2n25x07v31vx44wh0h0000gn/T/opencode-test-vqttrylubt",
++   "id": "pty_1a9f5e2d3001dxnllIQymA58JI",
++   "pid": 18393,
++   "status": "running",
++   "title": "v2",
+  }
+
+- Expected  - 2
++ Received  + 11
+
+      at <anonymous> (/Users/sanjithagovindan/Documents/CMU/17313/fall-26-opencode-team-berry-fresh/packages/opencode/test/server/httpapi-v2-pty.test.ts:93:18)
+(fail) v2 pty HttpApi > serves location-wrapped PTY routes and retains exited sessions [5375.24ms]
+[04:27:17.959] ERROR (#1623259): 1464 | /** @internal */
+1465 | export const timeoutOrElse = /*#__PURE__*/dual(2, (self, options) => raceFirst(self, flatMap(sleep(options.duration), options.orElse)));
+1466 | /** @internal */
+1467 | export const timeout = /*#__PURE__*/dual(2, (self, duration) => timeoutOrElse(self, {
+1468 |   duration,
+1469 |   orElse: () => fail(new TimeoutError())
+                            ^
+TimeoutError: TimeoutError
+       _tag: "TimeoutError",
+ ~effect/Cause/TimeoutError: "~effect/Cause/TimeoutError",
+
+      at orElse (/Users/sanjithagovindan/Documents/CMU/17313/fall-26-opencode-team-berry-fresh/node_modules/.bun/effect@4.0.0-beta.83/node_modules/effect/dist/internal/effect.js:1469:22)
+      at runLoop (/Users/sanjithagovindan/Documents/CMU/17313/fall-26-opencode-team-berry-fresh/node_modules/.bun/effect@4.0.0-beta.83/node_modules/effect/dist/internal/effect.js:444:98)
+      at evaluate (/Users/sanjithagovindan/Documents/CMU/17313/fall-26-opencode-team-berry-fresh/node_modules/.bun/effect@4.0.0-beta.83/node_modules/effect/dist/internal/effect.js:412:23)
+      at /Users/sanjithagovindan/Documents/CMU/17313/fall-26-opencode-team-berry-fresh/node_modules/.bun/effect@4.0.0-beta.83/node_modules/effect/dist/internal/effect.js:723:15
+
+1464 | /** @internal */
+1465 | export const timeoutOrElse = /*#__PURE__*/dual(2, (self, options) => raceFirst(self, flatMap(sleep(options.duration), options.orElse)));
+1466 | /** @internal */
+1467 | export const timeout = /*#__PURE__*/dual(2, (self, duration) => timeoutOrElse(self, {
+1468 |   duration,
+1469 |   orElse: () => fail(new TimeoutError())
+                            ^
+error: undefined
+       _tag: "TimeoutError",
+ ~effect/Cause/TimeoutError: "~effect/Cause/TimeoutError",
+
+      at orElse (/Users/sanjithagovindan/Documents/CMU/17313/fall-26-opencode-team-berry-fresh/node_modules/.bun/effect@4.0.0-beta.83/node_modules/effect/dist/internal/effect.js:1469:22)
+      at runLoop (/Users/sanjithagovindan/Documents/CMU/17313/fall-26-opencode-team-berry-fresh/node_modules/.bun/effect@4.0.0-beta.83/node_modules/effect/dist/internal/effect.js:444:98)
+      at evaluate (/Users/sanjithagovindan/Documents/CMU/17313/fall-26-opencode-team-berry-fresh/node_modules/.bun/effect@4.0.0-beta.83/node_modules/effect/dist/internal/effect.js:412:23)
+      at /Users/sanjithagovindan/Documents/CMU/17313/fall-26-opencode-team-berry-fresh/node_modules/.bun/effect@4.0.0-beta.83/node_modules/effect/dist/internal/effect.js:723:15
+(fail) v2 pty HttpApi > applies plugin shell environment before forced PTY values [5526.60ms]
+
+test/server/httpapi-mdns.test.ts:
+[04:27:18.024] WARN (#1649546): mDNS enabled but hostname is loopback; skipping mDNS publish
