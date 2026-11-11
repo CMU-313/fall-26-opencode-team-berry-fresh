@@ -34,3 +34,15 @@ Properties written or suggested by opencode or another AI tool: R1–R5. R1–R4
 ## Running and Triage
 
 I ran `bun test src/pages/session/v2/review-file-copy.test.ts` from `packages/app`. All eight tests passed, including the existing unit tests and the new properties for R1–R4. Fast-check found no counterexamples in the generated inputs, therefore no property failures required triage or a code fix.
+
+## Hand-written mutants
+
+Each mutant is applied and tested separately.
+
+| ID | Requirement targeted | Change | Predicted killer | Actual result |
+|---|---|---|---|---|
+| H1 | R2 | Removed `await options.writeText(path)`, so copying reports success without updating the clipboard. | R2 and R4: the clipboard should contain the selected path. | Killed by R1–R4. R2 and R4 caught unchanged clipboard contents; R1 and R3 caught an incorrect success return on simulated failure. |
+| H2 | R4 | Changed the clipboard value to `path.split("/").pop()!`, removing all directory information. | R4 and R2: the copied path should retain its directories. | Killed by R2 and R4: expected `first/xz.ts` or `src/xz.ts`, but received `xz.ts`. |
+| H3 | R2 | Changed the clipboard value to `path.toLowerCase()`, altering uppercase characters. | R2 and R4: the copied path should preserve case. | Killed by R2 and R4: generated paths containing `Z` were copied with lowercase `z`. |
+| H4 | R2 | Changed the clipboard value to `path.replaceAll(" ", "\\ ")`, adding backslashes before spaces. | R2 and R4: the copied path should preserve literal spaces. | Killed by R2 and R4: paths containing spaces gained extra backslashes. |
+| H5 | R2 | Changed the clipboard value to `path.replace(/[^\x00-\x7F]/g, "")`, removing non-ASCII characters. | R2 and R4: the copied path should preserve Unicode characters. | Killed by R2 and R4: generated paths containing `é` lost that character. |
