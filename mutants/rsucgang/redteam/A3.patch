@@ -1,0 +1,13 @@
+diff --git a/packages/app/src/components/prompt-input.tsx b/packages/app/src/components/prompt-input.tsx
+index 6b40e00..3d67a07 100644
+--- a/packages/app/src/components/prompt-input.tsx
++++ b/packages/app/src/components/prompt-input.tsx
+@@ -387,7 +387,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
+   }
+ 
+   const applyHistoryPrompt = (entry: PromptHistoryEntry, position: "start" | "end") => {
+-    const p = entry.prompt
++    const p = entry.prompt.filter((part) => part.type === "text")
+     const length = position === "start" ? 0 : promptLength(p)
+     setStore("applyingHistory", true)
+     applyHistoryComments(entry.comments)

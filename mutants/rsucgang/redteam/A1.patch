@@ -1,0 +1,22 @@
+diff --git a/packages/app/src/components/prompt-input/history.ts b/packages/app/src/components/prompt-input/history.ts
+index 79e8abc..f2734db 100644
+--- a/packages/app/src/components/prompt-input/history.ts
++++ b/packages/app/src/components/prompt-input/history.ts
+@@ -123,17 +123,6 @@ function isPromptEqual(promptA: PromptHistoryStoredEntry, promptB: PromptHistory
+     if (partA.type === "text" && partA.content !== (partB.type === "text" ? partB.content : "")) return false
+     if (partA.type === "file") {
+       if (partA.path !== (partB.type === "file" ? partB.path : "")) return false
+-      const a = partA.selection
+-      const b = partB.type === "file" ? partB.selection : undefined
+-      const sameSelection =
+-        (!a && !b) ||
+-        (!!a &&
+-          !!b &&
+-          a.startLine === b.startLine &&
+-          a.startChar === b.startChar &&
+-          a.endLine === b.endLine &&
+-          a.endChar === b.endChar)
+-      if (!sameSelection) return false
+     }
+     if (partA.type === "agent" && partA.name !== (partB.type === "agent" ? partB.name : "")) return false
+     if (partA.type === "image" && partA.id !== (partB.type === "image" ? partB.id : "")) return false
