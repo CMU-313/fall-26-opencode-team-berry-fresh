@@ -130,4 +130,34 @@ describe("copyReviewFilePath properties", () => {
       }),
     )
   })
+
+  // R6: Copy feedback matches the clipboard outcome.
+  // Kind: conditional.
+  test("R6: copy calls only the matching feedback callback", async () => {
+    await fc.assert(
+      fc.asyncProperty(relativePath, async (path) => {
+        for (const succeeds of [true, false]) {
+          const successes: string[] = []
+          const failures: string[] = []
+
+          const result = await copyReviewFilePath(path, {
+            writeText: async () => {
+              if (!succeeds) throw new Error("clipboard unavailable")
+            },
+            onSuccess: (value) => {
+              successes.push(value)
+            },
+            onFailure: (value) => {
+              failures.push(value)
+            },
+          })
+
+          expect(result).toBe(succeeds)
+          expect(successes).toEqual(succeeds ? [path] : [])
+          expect(failures).toEqual(succeeds ? [] : [path])
+        }
+      }),
+    )
+  })
+
 })
