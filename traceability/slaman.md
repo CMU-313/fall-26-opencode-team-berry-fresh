@@ -57,3 +57,19 @@ Patches are in `mutants/slaman/`. Each mutant changes the Tutor permission rules
 | H3 | R4 | The final `{ edit: "deny", bash: "deny" }` guard is moved before `user`, so the user's global config comes last again. | **R4.** R4 runs with a global config that sets `bash` and `edit` to `allow`. With the user config last, those allows win, and R4 checks that Tutor's `edit` and `bash` stay `deny`. This is the P4 bug put back. | **Killed** by R4, as predicted. Counterexample: `["0.ts", "git commit -m "]`, where Tutor `edit` → allow (expected deny). |
 | H4 | R5 | Tutor's `webfetch: "allow"` becomes `{ "*": "allow", "http://*": "deny" }`, as if to make Tutor use secure connections only. Tutor can no longer fetch `http://` documentation, such as a local docs server at `http://localhost`. | **R5.** R5 checks `webfetch` is `allow` for every `fc.webUrl()` URL. R5's P4 counterexample was `http://a.aa`, so the generator produces `http://` URLs, and H4 denies them. | **Killed** by R5, as predicted. Counterexample: `"http://a.aa"`, where Tutor `webfetch` → deny (expected allow). This is the same URL R5 shrank to in P4. |
 | H5 | R3 | The final guard's `bash: "deny"` becomes `{ "*": "deny", "ls*": "allow" }`, as if to let Tutor list files. Tutor can then run `ls`, which is a shell command. | **R4** (R3 has no property). R4's `shellCommand` generator includes the literal `ls`, and R4 checks Tutor's `bash` is `deny` for every command. R1 doesn't check `bash`, and R5 only checks the literal pattern `"*"`, which `ls*` doesn't match. | **Killed** by R4, as predicted. Counterexample: `["_.ts", "ls"]`, where Tutor `bash` → allow (expected deny). R4 caught it only because `ls` is one of its five fixed commands; R3 itself still has no property. |
+
+## Stryker Comparison
+
+**Config:** `packages/opencode/stryker.slaman.config.json` runs only the property tests (`bun test --timeout 30000 test/learning-mode/learning-mode.property.test.ts`). It mutates only the permission code Tutor uses in `packages/opencode/src/agent/agent.ts`: the shared `read` rules (lines 121–126), the user's global config (line 141), and Tutor's permission list (lines 189–208). It uses `concurrency: 2` and `timeoutMS: 60000`, because each test run starts the full Agent service. With Stryker's defaults (9 parallel runs), every mutant timed out and the report showed a meaningless 100%. Reports: `mutants/slaman/mutation-initial.html` (before strengthening) and `mutants/slaman/mutation.html` (after strengthening).
+
+**Seed:** fast-check is seeded with `fc.configureGlobal({ seed: 42 })` at the top of the property test file, so every run (Stryker and the hand-written mutants) uses the same generated inputs.
+
+**Initial mutation score:** 50.00% (9 killed, 9 survived, 18 mutants).
+
+Where the 9 survivors are:
+
+| Code | Survivors | Why they survived |
+|---|---|---|
+| Tutor's own rules (lines 191–201): the whole list replaced with `{}`, `"*": "deny"` → `""`, `task` → `{}`, `task` `"*": "deny"` → `""`, `explore: "allow"` → `""` | 5 | Every property checks an action that should be allowed or denied (`edit`, `bash`, `read`, `grep`, `webfetch`). For those, the defaults and the final guard still give the right answer without Tutor's own rules. No property checks that **everything else** is denied (e.g. `task`, which can start the `general` subagent that edits files), so deleting Tutor's deny-by-default goes unnoticed. This is the same blind spot as H1. |
+| Shared `read` rules (lines 123–125): `"*.env": "ask"`, `"*.env.*": "ask"`, and `"*.env.example": "allow"` → `""` | 3 | R2's oracle compares Tutor's `read` result to Build's, but both use the same `read` constant, so breaking a rule changes both the same way and they still match. Nothing checks the expected `ask`/`allow` result for a secret path directly. |
+| `question: "allow"` (line 197) → `""` | 1 | The quiz tool. "Tutor can quiz you" isn't one of R1–R7, so no property checks it. |
