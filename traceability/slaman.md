@@ -87,3 +87,69 @@ Hand-written mutants come from the requirements, so they test realistic ways the
 - **Narrowed scope:** A first run also mutated the `defaults` block and Tutor's metadata (`name`, `description`, `mode`, `native`), with 35 mutants and a 37.14% score. I narrowed `mutate` to the code Tutor's permissions actually use: the shared `read` rules (lines 121–126), the user's config (line 141), and Tutor's permission list (lines 189–208).
 - **Why only 18 mutants:** Tutor's permission policy is configuration with no conditions or operators, so Stryker can only empty strings (14 mutants) and objects (4 mutants).
 - **Config settings:** `concurrency: 2` and `timeoutMS: 60000`, because each test run starts the full Agent service. With Stryker's defaults, every mutant timed out, and the report showed a meaningless 100%.
+
+## Agent Failure Case
+
+**Transcript excerpt**
+
+`/share` link: https://opncd.ai/share/43GG0sv9
+
+My prompt to opencode:
+
+> I am writing fast-check property-based tests for some requirements of the Tutor agent's permissions (found in packages/opencode/src/agent/agent.ts). I was wondering if you could write one fast-check property for the following requirement:
+>
+> R3: Tutor must not run any shell commands, including git commands.
+>
+> Acceptance criteria: For Tutor, `ls`, `bun test`, `git commit -m x`, and `git push` each evaluate to deny.
+>
+> Please put the property in a new file (packages/opencode/test/learning-mode/agent-r3.property). Check permissions with Permission.evaluate("bash", command, tutor.permission) from src/permission. Please reference packages/opencode/test/agent/agent.test.ts to see how to load an agent in a test. Please also reference packages/opencode/test/learning-mode/learning-mode.property.test.ts to match the formatting and structure of the existing property tests, but DO NOT reuse. Finally, run the test from packages/opencode with `bun test --timeout 30000 test/learning-mode/agent-r3.property.test.ts` to ensure it passes.
+
+Note: After running the prompt above, I decided to rename `agent-r3.property.test.ts` to `opencode.property.test.ts` (changing none of the contents) for clarity.
+
+Property opencode wrote:
+
+```ts
+// The commands named by the R3 acceptance criteria: a harmless listing, a test run, and two
+// git commands that mutate a remote or repository history.
+const acceptedCommands = fc.constantFrom("ls", "bun test", "git commit -m x", "git push")
+
+// R3: "Tutor must not run any shell commands, including git commands."
+// Kind: invariant
+it.instance("R3: tutor denies shell commands including git commands", () =>
+  Effect.gen(function* () {
+    const svc = yield* Agent.Service
+    const tutor = (yield* svc.get("tutor"))!
+    fc.assert(
+      fc.property(acceptedCommands, (command) => {
+        expect(Permission.evaluate("bash", command, tutor.permission).action).toBe("deny")
+      }),
+    )
+  }),
+)
+```
+
+Report from opencode:
+"Test passes: 1 pass, 0 fail."
+
+**The mutant it let survive:** 
+The red-team mutant A2 from afels, which changes the final guard's `bash: "deny"` to `{ "*": "deny", "git log*": "allow", "git diff*": "allow", "git show*": "allow", "git status*": "allow" }`, as if to let Tutor explain recent changes. Tutor can then run `git log -5`, which breaks R3 ("including git commands"). With A2 applied, opencode's property still passes (1 pass, 0 fail).
+
+**Why the property was too weak:** 
+The generator is `fc.constantFrom` over the four commands in the acceptance criteria, so fast-check repeats the same four inputs 100 times. It's really four example tests written as a property. It never tries any other command, so it can only catch a change that affects exactly `ls`, `bun test`, `git commit -m x`, or `git push`. A2 leaves all four denied and allows only read-only git commands, which are exactly the "safe-looking" commands someone might add. The acceptance criteria give examples, but R3 says any shell command, and the property tested only the examples.
+
+**Strengthened version and evidence:** 
+`R3: tutor denies every shell command, including read-only git commands` in `learning-mode.property.test.ts`. Its `shellCommand` generator draws from the commands interviewees worried about, read-only commands (`git log`, `git diff`, `git show HEAD`, `git status`, `pwd`, `cat README.md`, `ls -la`), a command followed by arbitrary text, and fully arbitrary strings. Applying A2 gets the following:
+
+```
+opencode's property (opencode.property.test.ts):
+ 1 pass
+ 0 fail
+
+strengthened R3 (learning-mode.property.test.ts):
+(fail) R3: tutor denies every shell command, including read-only git commands
+Counterexample: ["git log "]
+Expected: "deny"
+Received: "allow"
+```
+
+Both properties pass on the real code (no mutant).
