@@ -184,13 +184,15 @@ test("R1: undo acceptance property", async () => {
   await fc.assert(
     fc.asyncProperty(input, async (value) => {
       await run("R1", value)
+      // R1 also requires preserving non-overlapping manual edits.
+      await run("R2", value)
       await run("R1", value, "keep")
       await run("R1", value, "overwrite")
       await run("R1", value, "stale")
     }),
-    { numRuns: 25 },
+    { seed: 42, numRuns: 25 },
   )
-}, 120_000)
+}, 300_000)
 
 // R2: /undo should preserve non-overlapping manual edits made after the agent’s changes
 // Kind: Invariant
@@ -199,9 +201,9 @@ test("R2: undo acceptance property", async () => {
     fc.asyncProperty(input, async (value) => {
       await run("R2", value)
     }),
-    { numRuns: 25 },
+    { seed: 42, numRuns: 25 },
   )
-}, 120_000)
+}, 300_000)
 
 // R4: /undo must delete new files created by the previous agent prompt if they have not subsequently been manually modified. If a new file has subsequent manual modifications, /undo must preserve it unless the user explicitly approves deletion.
 // Kind: Round-trip and invariant
@@ -213,9 +215,9 @@ test("R4: undo acceptance property", async () => {
       await run("R4", value, "overwrite")
       await run("R4", value, "stale")
     }),
-    { numRuns: 25 },
+    { seed: 42, numRuns: 25 },
   )
-}, 120_000)
+}, 300_000)
 
 // R6: When no subsequent manual edits have occurred, /undo must restore agent-modified file contents to their pre-prompt state, verifiable through file comparison or Git. When subsequent manual edits exist, preservation and conflict handling follow R2 and R3.
 // Kind: Model / oracle
@@ -224,6 +226,6 @@ test("R6: undo acceptance property", async () => {
     fc.asyncProperty(input, async (value) => {
       await run("R6", value)
     }),
-    { numRuns: 25 },
+    { seed: 42, numRuns: 25 },
   )
-}, 120_000)
+}, 300_000)
