@@ -60,16 +60,30 @@ Patches are in `mutants/slaman/`. Each mutant changes the Tutor permission rules
 
 ## Stryker Comparison
 
-**Config:** `packages/opencode/stryker.slaman.config.json` runs only the property tests (`bun test --timeout 30000 test/learning-mode/learning-mode.property.test.ts`). It mutates only the permission code Tutor uses in `packages/opencode/src/agent/agent.ts`: the shared `read` rules (lines 121–126), the user's global config (line 141), and Tutor's permission list (lines 189–208). It uses `concurrency: 2` and `timeoutMS: 60000`, because each test run starts the full Agent service. With Stryker's defaults (9 parallel runs), every mutant timed out and the report showed a meaningless 100%. Reports: `mutants/slaman/mutation-initial.html` (before strengthening) and `mutants/slaman/mutation.html` (after strengthening).
+**Config:** `packages/opencode/stryker.slaman.config.json`. 
 
-**Seed:** fast-check is seeded with `fc.configureGlobal({ seed: 42 })` at the top of the property test file, so every run (Stryker and the hand-written mutants) uses the same generated inputs.
+**Reports:** `mutants/slaman/mutation-initial.html` (before strengthening) and `mutants/slaman/mutation.html` (after).
 
-**Initial mutation score:** 50.00% (9 killed, 9 survived, 18 mutants).
+**Seed:** `fc.configureGlobal({ seed: 42 })`, set at the top of the property test file and used for every Stryker and hand-written mutant run.
 
-Where the 9 survivors are:
+**Mutation Score:**
+- Before strengthening: 50.00% (9 of 18 killed).
+- After strengthening: **94.44%** as Stryker reports it (17 of 18 killed), and **100%** excluding the 1 equivalent mutant (17 of 17).
 
-| Code | Survivors | Why they survived |
-|---|---|---|
-| Tutor's own rules (lines 191–201): the whole list replaced with `{}`, `"*": "deny"` → `""`, `task` → `{}`, `task` `"*": "deny"` → `""`, `explore: "allow"` → `""` | 5 | Every property checks an action that should be allowed or denied (`edit`, `bash`, `read`, `grep`, `webfetch`). For those, the defaults and the final guard still give the right answer without Tutor's own rules. No property checks that **everything else** is denied (e.g. `task`, which can start the `general` subagent that edits files), so deleting Tutor's deny-by-default goes unnoticed. This is the same blind spot as H1. |
-| Shared `read` rules (lines 123–125): `"*.env": "ask"`, `"*.env.*": "ask"`, and `"*.env.example": "allow"` → `""` | 3 | R2's oracle compares Tutor's `read` result to Build's, but both use the same `read` constant, so breaking a rule changes both the same way and they still match. Nothing checks the expected `ask`/`allow` result for a secret path directly. |
-| `question: "allow"` (line 197) → `""` | 1 | The quiz tool. "Tutor can quiz you" isn't one of R1–R7, so no property checks it. |
+**Which of your hand-written mutants did Stryker never generate? Why not?**
+Stryker never generated any of my hand-written mutants (H1–H5), because it only empties values (`"allow"` → `""`, `{...}` → `{}`). It never writes a new value, adds a new rule, or moves code. H2 (`"allow"` → `"ask"`), H4 (`"http://*": "deny"`), and H5 (`"ls*": "allow"`) all need a new value. H1 (`task: "allow"`) is close to a Stryker mutant (`task: {}`), but still needs a new value. H3 moves the final guard before `user`, and Stryker has no mutator that reorders code, even though order decides everything here because the last matching rule wins. These are realistic, deliberate edits, like "ask before searching" or "secure connections only", which syntax-level mutators don't make.
+
+**Which Stryker survivors would you never have thought of? Are any of them bugs a real developer might plausibly write?**
+- **Deleting all of Tutor's own rules** (`Permission.fromConfig({...})` → `Permission.fromConfig({})`). I assumed Tutor's `"*": "deny"` was what kept it read-only, but every property still passed without it, because the defaults and the final guard happen to give the right answer for the tools the properties check. Tutor would then be allowed every other tool, including `task` with the `general` subagent, which edits files. This is a plausible real bug if someone "simplifies" Tutor's rules because the guard seems to cover them. I killed it with a new R1 property: every tool outside Tutor's read-only set is denied, and `task` may only start `explore`.
+- **Emptying the `.env` rules in the shared `read` constant.** R2's oracle compares Tutor to Build, and I didn't see that sharing the constant (my own P4 fix) means a broken rule breaks both the same way, so they still match. This is a plausible real bug that would let Tutor read secrets without asking (red-team mutant A1 did the same thing). I killed it by checking secret paths directly: `.env` files must be `ask`, and `.env.example` must be `allow`.
+
+**What does each approach find that the other doesn't?**
+Hand-written mutants come from the requirements, so they test realistic ways the policy could be weakened on purpose: rule order (H3), new exceptions (H4, H5), and indirect routes to file changes (H1). Stryker is mechanical, but it tries every rule, including ones I assumed were covered, and it found that Tutor's deny-by-default and the `.env` rules weren't protected by any property. I missed those while designing mutants because I was thinking about which tools Tutor should use, not about which rule actually produced each answer. Stryker is weaker on configuration than on logic: it made only 18 mutants and can't produce changes like H2–H5.
+
+**Equivalent mutants**
+- `question: "allow"` → `question: ""` (line 197). The question tool never asks for permission when it runs, and the only place its rule is read is `Permission.disabled`, which hides a tool only when its rule is `"deny"`. An empty action isn't `"deny"`, so the quiz tool stays available and runs exactly as with `"allow"`, and nothing observable changes.
+
+**Additional notes**
+- **Narrowed scope:** A first run also mutated the `defaults` block and Tutor's metadata (`name`, `description`, `mode`, `native`), with 35 mutants and a 37.14% score. I narrowed `mutate` to the code Tutor's permissions actually use: the shared `read` rules (lines 121–126), the user's config (line 141), and Tutor's permission list (lines 189–208).
+- **Why only 18 mutants:** Tutor's permission policy is configuration with no conditions or operators, so Stryker can only empty strings (14 mutants) and objects (4 mutants).
+- **Config settings:** `concurrency: 2` and `timeoutMS: 60000`, because each test run starts the full Agent service. With Stryker's defaults, every mutant timed out, and the report showed a meaningless 100%.
