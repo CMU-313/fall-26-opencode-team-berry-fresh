@@ -153,3 +153,15 @@ Received: "allow"
 ```
 
 Both properties pass on the real code (no mutant).
+
+## Red Team
+
+My feature was red-teamed by **Arianne Fels (afels)**, who posted three mutants on PR #35 based on commit `03da74e`. Each one changes `packages/opencode/src/agent/agent.ts`. "Before" is my P4 properties (the property file before the P5 strengthening commit), and "After" is the strengthened properties. All results use the fast-check seed 42.
+
+| ID | Requirement targeted | Change | Before | After | Fix |
+|---|---|---|---|---|---|
+| A1 | R2 | Removes the `"*.env.*": "ask"` rule from the shared `read` rules, so `.env.local` and other `.env.*` files are read without asking. | **Survived.** R2's oracle compares Tutor to Build, and both use the same `read` rules, so they break the same way and still match. | **Killed** by R2. Counterexample: `".env.b"`, where Tutor `read` → allow (expected ask). | R2 now checks secret paths directly (`ask`, or `allow` for `.env.example`), and the secret-path generator produces any name ending in `.env` or `.env.<suffix>`. |
+| A2 | R3 | The final guard's `bash: "deny"` becomes `"*": "deny"` plus `allow` for `git log*`, `git diff*`, `git show*`, and `git status*`, so Tutor can run read-only git commands. | **Survived.** R3 had no property, R4's command generator never produced those git commands, and R5 only checked the literal pattern `"*"`. | **Killed** by R3, R4, and R5. Counterexample: `"git log "`, where Tutor `bash` → allow (expected deny). | New R3 property: Tutor denies every shell command. The shared command generator now includes read-only git commands and arbitrary text, and R5 checks generated commands. |
+| A3 | R4 | The final `{ edit: "deny", bash: "deny" }` guard is only added when the global config has `"*": "allow"`. | **Survived.** R4 ran with one fixed config, which always had `"*": "allow"`, so the guard was still added in the only case it tested. | **Killed** by R4. Counterexample: `{"edit": "allow"}`, where Tutor `edit` → allow (expected deny). | R4 now generates the global config (any mix of `"*"`, `bash`, and `edit`, as a whole or per pattern), with each case in its own project folder. |
+
+All three mutants were killed by strengthening properties, so none are argued equivalent. Arianne checked her mutants against a copy of my permission logic, and applying her patches to the real code confirmed that each one survived my P4 properties, as she predicted.
