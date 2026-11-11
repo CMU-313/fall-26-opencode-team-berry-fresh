@@ -46,3 +46,24 @@ Each mutant is applied and tested separately.
 | H3 | R2 | Changed the clipboard value to `path.toLowerCase()`, altering uppercase characters. | R2 and R4: the copied path should preserve case. | Killed by R2 and R4: generated paths containing `Z` were copied with lowercase `z`. |
 | H4 | R2 | Changed the clipboard value to `path.replaceAll(" ", "\\ ")`, adding backslashes before spaces. | R2 and R4: the copied path should preserve literal spaces. | Killed by R2 and R4: paths containing spaces gained extra backslashes. |
 | H5 | R2 | Changed the clipboard value to `path.replace(/[^\x00-\x7F]/g, "")`, removing non-ASCII characters. | R2 and R4: the copied path should preserve Unicode characters. | Killed by R2 and R4: generated paths containing `é` lost that character. |
+
+## Stryker comparison
+
+### Initial run
+
+- Configuration: `packages/app/stryker.rsucgang.config.json`
+- Property tests: `packages/app/src/pages/session/v2/review-file-copy.property.test.ts`
+- Mutated code: `packages/app/src/pages/session/v2/review-file-copy.ts`, lines 1–15
+- Fast-check seed: 42
+- Initial report: `mutants/rsucgang/mutation.initial.html`
+
+| Generated | Killed | Survived | Timed out | Mutation score |
+|---|---|---|---|---|
+| 7 | 5 | 2 | 0 | 71.43% |
+
+### Surviving mutants
+
+| Change | Why it survived |
+|---|---|
+| Removed `options.onSuccess(path)` | The properties use an empty success callback and never check whether it runs. |
+| Removed `options.onFailure(path)` | The properties use an empty failure callback and never check whether it runs. |
