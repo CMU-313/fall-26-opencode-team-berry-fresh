@@ -4,6 +4,7 @@ import * as fc from "fast-check"
 import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { dirname, join } from "node:path"
+import { createReviewFilePathWriter } from "./review-file-copy-writer"
 
 fc.configureGlobal({ seed: 42 })
 // Generate valid path segments with spaces, punctuation, and Unicode.
@@ -12,7 +13,7 @@ const segment = fc
   .map((characters) => `x${characters.join("")}z`)
 
 // Zero folders gives a root-level file. More folders exercise nested paths.
-const folders = fc.array(segment, { maxLength: 3 })
+const folders = fc.array(segment, { maxLength: 8 })
 const filename = segment.map((name) => `${name}.ts`)
 const relativePath = fc
   .tuple(folders, filename)
@@ -182,6 +183,29 @@ describe("copyReviewFilePath properties", () => {
           }
         },
       ),
+    )
+  })
+
+  // R5: Copying preserves the session-relative path.
+  // Kind: invariant.
+  test("R5: clipboard adapter preserves relative paths", async () => {
+    await fc.assert(
+      fc.asyncProperty(relativePath, async (path) => {
+        const writes: string[] = []
+        const writeText = createReviewFilePathWriter({
+          writeText: async (value) => {
+            writes.push(value)
+          },
+        })
+
+        await copyReviewFilePath(path, {
+          writeText,
+          onSuccess: () => {},
+          onFailure: () => {},
+        })
+
+        expect(writes).toEqual([path])
+      }),
     )
   })
 
