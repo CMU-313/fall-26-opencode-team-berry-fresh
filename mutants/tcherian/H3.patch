@@ -1,0 +1,14 @@
+diff --git a/packages/tui/src/routes/session/bookmarks.ts b/packages/tui/src/routes/session/bookmarks.ts
+--- a/packages/tui/src/routes/session/bookmarks.ts
++++ b/packages/tui/src/routes/session/bookmarks.ts
+@@ -12,7 +12,10 @@ export function toggleBookmark(kv: KV, sessionID: string, messageID: string) {
+   if (!kv.ready) return
+   const ids = getBookmarks(kv, sessionID)
+   const saved = ids.includes(messageID)
+-  kv.set(`session_bookmarks:${sessionID}`, saved ? ids.filter((id) => id !== messageID) : [...ids, messageID])
++  kv.set(
++    `session_bookmarks:${sessionID}`,
++    saved ? ids.filter((id) => id !== messageID) : [...ids, messageID, messageID],
++  )
+   return !saved
+ }

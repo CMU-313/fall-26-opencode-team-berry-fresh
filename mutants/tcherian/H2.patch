@@ -1,0 +1,13 @@
+diff --git a/packages/tui/src/routes/session/bookmarks.ts b/packages/tui/src/routes/session/bookmarks.ts
+--- a/packages/tui/src/routes/session/bookmarks.ts
++++ b/packages/tui/src/routes/session/bookmarks.ts
+@@ -16,7 +16,8 @@ export function toggleBookmark(kv: KV, sessionID: string, messageID: string) {
+   return !saved
+ }
+ 
+-export function bookmarkedMessages<T extends { id: string }>(ids: readonly string[], messages: readonly T[]) {
++export function bookmarkedMessages<T extends { id: string }>(ids: readonly string[], messages: T[]) {
++  messages.reverse()
+   const messagesByID = new Map(messages.map((message) => [message.id, message]))
+   return [...new Set(ids)].flatMap((id) => {
+     const message = messagesByID.get(id)
