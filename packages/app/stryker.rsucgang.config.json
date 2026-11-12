@@ -1,0 +1,11 @@
+{
+  "testRunner": "command",
+  "commandRunner": {
+    "command": "bun test src/pages/session/v2/review-file-copy.property.test.ts"
+  },
+  "mutate": [
+    "src/pages/session/v2/review-file-copy.ts:1-15"
+  ],
+  "coverageAnalysis": "off",
+  "reporters": ["html", "clear-text", "progress"]
+}

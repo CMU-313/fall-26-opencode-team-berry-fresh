@@ -1,0 +1,13 @@
+diff --git a/packages/app/src/components/prompt-input/history.ts b/packages/app/src/components/prompt-input/history.ts
+index 79e8abc..7af57e2 100644
+--- a/packages/app/src/components/prompt-input/history.ts
++++ b/packages/app/src/components/prompt-input/history.ts
+@@ -62,7 +62,7 @@ export function clonePromptHistoryComments(comments: PromptHistoryComment[]) {
+ export function normalizePromptHistoryEntry(entry: PromptHistoryStoredEntry): PromptHistoryEntry {
+   if (Array.isArray(entry)) {
+     return {
+-      prompt: clonePromptParts(entry),
++      prompt: entry,
+       comments: [],
+     }
+   }

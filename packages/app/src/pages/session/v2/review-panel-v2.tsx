@@ -2,6 +2,7 @@ import { createMemo, createResource, createSignal, Show, type JSX } from "solid-
 import type { SnapshotFileDiff, VcsFileDiff } from "@opencode-ai/sdk/v2"
 import type { FileDiffInfo } from "@opencode-ai/client/promise"
 import { showToast } from "@/utils/toast"
+import { createReviewFilePathWriter } from "./review-file-copy-writer"
 import {
   SESSION_REVIEW_V2_SIDEBAR_WIDTH_MAX,
   SESSION_REVIEW_V2_SIDEBAR_WIDTH_MIN,
@@ -123,7 +124,7 @@ export function ReviewPanelV2(props: ReviewPanelV2Props) {
     }
 
     return copyReviewFilePath(path, {
-      writeText: (value) => clipboard.writeText(value),
+      writeText: createReviewFilePathWriter(clipboard),
       onSuccess: (value) => {
         showToast({
           variant: "success",

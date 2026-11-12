@@ -1,0 +1,142 @@
+Agent failure case: Copy File Path R2
+Source: terminal output pasted by Rebecca in this conversation.
+These are selected output excerpts, not a complete raw terminal log.
+Stack traces and repeated fast-check explanatory text are omitted.
+No commands were rerun when assembling this file.
+
+Working directory for successful test invocations:
+/workspaces/fall-26-opencode-team-berry-fresh/packages/app
+Branch: rsucgang/properties
+Bun: v1.3.14 (0d9b296a)
+Fast-check seed: 42
+Property file: src/pages/session/v2/review-file-copy.property.test.ts
+
+1. INITIAL OPENCODE SUGGESTION: INCORRECT ORACLE ON ORIGINAL HELPER
+
+Command:
+bun test src/pages/session/v2/review-file-copy.property.test.ts -t "R2: successful copy replaces clipboard, failure leaves clipboard unchanged"
+
+error: Property failed after 1 tests
+{ seed: 42, path: "0:0:0", endOnFailure: true }
+Counterexample: ["xz.ts","xz.ts",false]
+Shrunk 2 time(s)
+
+Expected: "previous clipboard contents"
+Received: "folderB/xz.ts"
+
+0 pass
+5 filtered out
+1 fail
+12 expect() calls
+Ran 1 test across 1 file. [885.00ms]
+
+Interpretation: failure correctly preserves the last successful copy, rather
+than restoring the clipboard's initial contents. This is not mutant survival.
+
+2. REVISED OPENCODE SUGGESTION ON ORIGINAL HELPER
+
+Command:
+bun test src/pages/session/v2/review-file-copy.property.test.ts -t "R2: successful copy replaces clipboard, failure preserves current state"
+
+✓ copyReviewFilePath properties > R2: successful copy replaces clipboard, failure preserves current state [41.04ms]
+
+1 pass
+5 filtered out
+0 fail
+600 expect() calls
+Ran 1 test across 1 file. [756.00ms]
+
+3. REVISED AGENT PROPERTY WITH M1 APPLIED: SURVIVED
+
+Mutation: Truanne Chen's M1, replacing writeText(path) with writeText(path.trim()).
+The source diff was confirmed later, before restoration (see section 5).
+
+Command:
+bun test src/pages/session/v2/review-file-copy.property.test.ts -t "R2: successful copy replaces clipboard, failure preserves current state"
+
+✓ copyReviewFilePath properties > R2: successful copy replaces clipboard, failure preserves current state [23.24ms]
+
+1 pass
+5 filtered out
+0 fail
+600 expect() calls
+Ran 1 test across 1 file. [588.00ms]
+
+Interpretation: this filtered property did not detect the trim mutant.
+The other five properties were filtered out; no full-suite claim is made.
+
+4. STRENGTHENED PROPERTY WITH M1 APPLIED: KILLED
+
+Change to property: generate 1-3 trailing spaces in the selected path;
+preserve the exact expected clipboard state; call copy once per operation.
+
+Command:
+bun test src/pages/session/v2/review-file-copy.property.test.ts -t "R2: successful copy replaces clipboard, failure preserves current state"
+
+error: Property failed after 1 tests
+{ seed: 42, path: "0", endOnFailure: true }
+Counterexample: ["xz.ts",1]
+Shrunk 0 time(s)
+
+180 |             expect(result).toBe(succeeds)
+181 |             expect(clipboard.read()).toBe(expectedClipboard)
+
+Expected: "base/xz.ts "
+Received: "base/xz.ts"
+
+✗ copyReviewFilePath properties > R2: successful copy replaces clipboard, failure preserves current state [11.64ms]
+
+0 pass
+5 filtered out
+1 fail
+2 expect() calls
+Ran 1 test across 1 file. [545.00ms]
+
+Interpretation: failure is an exact clipboard-value mismatch, not a timeout
+or setup error. The mutant removes a trailing space belonging to the path.
+
+5. MUTANT DIFF CONFIRMED BEFORE RESTORATION
+
+Command:
+git diff -- src/pages/session/v2/review-file-copy.ts
+
+diff --git a/packages/app/src/pages/session/v2/review-file-copy.ts b/packages/app/src/pages/session/v2/review-file-copy.ts
+index 7faef77..88f6beb 100644
+--- a/packages/app/src/pages/session/v2/review-file-copy.ts
++++ b/packages/app/src/pages/session/v2/review-file-copy.ts
+@@ -4,7 +4,7 @@ export async function copyReviewFilePath(path: string, options: {
+   onFailure: (path: string) => void
+ }) {
+   try {
+-    await options.writeText(path)
++    await options.writeText(path.trim())
+     options.onSuccess(path)
+     return true
+   } catch {
+
+6. ORIGINAL HELPER RESTORED: FULL PROPERTY FILE PASSED
+
+Commands:
+git restore src/pages/session/v2/review-file-copy.ts
+bun test src/pages/session/v2/review-file-copy.property.test.ts
+
+✓ copyReviewFilePath properties > R1: copying preserves file contents [305.64ms]
+✓ copyReviewFilePath properties > R2: the clipboard holds the latest successfully copied path [3.30ms]
+✓ copyReviewFilePath properties > R3: copying preserves the original file path [272.02ms]
+✓ copyReviewFilePath properties > R4: changing the directory changes the copied path [1.95ms]
+✓ copyReviewFilePath properties > R6: copy calls only the matching feedback callback [2.79ms]
+✓ copyReviewFilePath properties > R2: successful copy replaces clipboard, failure preserves current state [3.17ms]
+
+6 pass
+0 fail
+2900 expect() calls
+Ran 6 tests across 1 file. [1.52s]
+
+Summary:
+- Revised agent property + original helper: passed.
+- Revised agent property + M1: survived.
+- Strengthened property + M1: killed.
+- Full strengthened property file + restored original helper: passed.
+
+Scope: evidence concerns the helper and filtered agent property. It does not
+test toast rendering, the feedback timer, or the panel clipboard adapter.
