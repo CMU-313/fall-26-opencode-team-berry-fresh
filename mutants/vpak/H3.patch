@@ -1,0 +1,13 @@
+diff --git a/packages/tui/src/component/dialog-session-list.tsx b/packages/tui/src/component/dialog-session-list.tsx
+index 41b5a74..77c0762 100644
+--- a/packages/tui/src/component/dialog-session-list.tsx
++++ b/packages/tui/src/component/dialog-session-list.tsx
+@@ -25,7 +25,7 @@ export function createDialogSessionListQuery(input: { search?: string; filter: S
+   const search = input.search?.trim()
+   return {
+     roots: true,
+-    limit: search ? 30 : 100,
++    limit: search ? 100 : 30,
+     ...(search ? { search } : {}),
+     ...input.filter,
+   }

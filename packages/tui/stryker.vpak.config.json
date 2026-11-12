@@ -1,0 +1,9 @@
+{
+  "testRunner": "command",
+  "commandRunner": { "command": "bun test test/component/dialog-session-list.test.ts -t \"list R[1-4]:\"" },
+  "mutate": ["src/component/dialog-session-list.tsx:24-50"],
+  "coverageAnalysis": "off",
+  "concurrency": 4,
+  "timeoutMS": 30000,
+  "reporters": ["html", "clear-text", "progress"]
+}

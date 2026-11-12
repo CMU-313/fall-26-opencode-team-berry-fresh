@@ -1,0 +1,13 @@
+diff --git a/packages/tui/src/component/dialog-session-list.tsx b/packages/tui/src/component/dialog-session-list.tsx
+index 41b5a74..e88303f 100644
+--- a/packages/tui/src/component/dialog-session-list.tsx
++++ b/packages/tui/src/component/dialog-session-list.tsx
+@@ -45,7 +45,7 @@ export function loadDialogSessionList<T>(input: {
+ export function orderByRecency(sessionsList: { id: string; parentID?: string; time: { updated: number } }[]) {
+   return sessionsList
+     .filter((x) => x.parentID === undefined)
+-    .toSorted((a, b) => b.time.updated - a.time.updated)
++    .toSorted((a, b) => (b.time.updated > a.time.updated ? 1 : 0))
+     .map((x) => x.id)
+ }
+ 
