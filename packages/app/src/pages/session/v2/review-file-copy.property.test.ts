@@ -160,4 +160,29 @@ describe("copyReviewFilePath properties", () => {
     )
   })
 
+  // R2: Preserve the exact path and retain clipboard state after failure.
+  // Kind: model/oracle.
+  test("R2: successful copy replaces clipboard, failure preserves current state", async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        relativePath,
+        fc.integer({ min: 1, max: 3 }),
+        async (path, spaces) => {
+          const clipboard = makeClipboard()
+          const selectedPath = `base/${path}${" ".repeat(spaces)}`
+          let expectedClipboard = clipboard.read()
+
+          for (const succeeds of [true, false]) {
+            const result = await clipboard.copy(selectedPath, succeeds)
+
+            if (succeeds) expectedClipboard = selectedPath
+
+            expect(result).toBe(succeeds)
+            expect(clipboard.read()).toBe(expectedClipboard)
+          }
+        },
+      ),
+    )
+  })
+
 })
