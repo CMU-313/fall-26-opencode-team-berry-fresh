@@ -1,0 +1,13 @@
+diff --git a/packages/tui/src/routes/session/index.tsx b/packages/tui/src/routes/session/index.tsx
+index 1a1b611..e34112b 100644
+--- a/packages/tui/src/routes/session/index.tsx
++++ b/packages/tui/src/routes/session/index.tsx
+@@ -968,7 +968,7 @@ export function Session() {
+       value: "session.bookmark.toggle",
+       category: "Session",
+       run: async () => {
+-        const lastAssistantMessage = messagesBeforeRevert().findLast((message) => message.role === "assistant")
++        const lastAssistantMessage = messagesBeforeRevert().find((message) => message.role === "assistant")
+         if (!lastAssistantMessage) {
+           toast.show({ message: "No assistant messages found", variant: "error" })
+           dialog.clear()

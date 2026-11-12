@@ -146,8 +146,8 @@ it.instance("tutor agent is a primary agent with the learning mode prompt", () =
 it.instance("tutor agent can read and quiz but cannot change files", () =>
   Effect.gen(function* () {
     const tutor = yield* load((svc) => svc.get("tutor"))
-    for (const tool of ["read", "grep", "glob", "list", "question"]) expect(evalPerm(tutor, tool)).toBe("allow")
-    for (const tool of ["edit", "write", "bash", "todowrite", "webfetch"]) expect(evalPerm(tutor, tool)).toBe("deny")
+    for (const tool of ["read", "grep", "glob", "list", "question", "webfetch"]) expect(evalPerm(tutor, tool)).toBe("allow")
+    for (const tool of ["edit", "write", "bash", "todowrite"]) expect(evalPerm(tutor, tool)).toBe("deny")
     expect(Permission.evaluate("task", "explore", tutor!.permission).action).toBe("allow")
     expect(Permission.evaluate("task", "general", tutor!.permission).action).toBe("deny")
     expect(Permission.evaluate("external_directory", "/some/other/path", tutor!.permission).action).toBe("ask")

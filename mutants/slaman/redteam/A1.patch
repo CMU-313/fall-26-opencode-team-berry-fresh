@@ -1,0 +1,13 @@
+diff --git a/packages/tui/src/context/local.tsx b/packages/tui/src/context/local.tsx
+index 19e3dac..ad6bc39 100644
+--- a/packages/tui/src/context/local.tsx
++++ b/packages/tui/src/context/local.tsx
+@@ -92,7 +92,7 @@ export function removeBookmark(items: LocalBookmark[], id: string) {
+ // R4 property found that, and bookmarks are now removed from the list.)
+ export function addBookmark(items: LocalBookmark[], entry: Omit<LocalBookmark, "createdAt">) {
+   const existing = items.find((item) => item.id === entry.id)
+-  if (existing) return { items, result: "exists" as const, existing }
++  if (existing) return { items, result: "exists" as const, existing: { ...entry, createdAt: existing.createdAt } }
+   return {
+     items: [...items, { ...entry, createdAt: Date.now() }],
+     result: "added" as const,

@@ -131,7 +131,7 @@ The following test files contain my automated tests:
 - `packages/opencode/test/command/explain.test.ts` (entire file)
   - Covers `/explain` being registered as a built-in command on the tutor agent, and its template filling in the project root and ending with a quiz offer.
 - `packages/opencode/test/agent/agent.test.ts` (tutor agent tests)
-  - Covers Tutor being a native primary agent with the learning-mode prompt, allowing read, grep, glob, list, question, and the Explore subagent, and denying edit, write, bash, todowrite, webfetch, and other subagents.
+  - Covers Tutor being a native primary agent with the learning-mode prompt, allowing read, grep, glob, list, question, webfetch, and the Explore subagent, and denying edit, write, bash, todowrite, and other subagents.
 - `packages/opencode/test/session/prompt.test.ts` (`/explain` end-to-end test)
   - Runs `/explain` on a fixture file and verifies that the request is answered by the tutor agent with the explain prompt, the file argument, and the project root.
 - `packages/core/test/plugin/command.test.ts` and `packages/core/test/agent.test.ts`

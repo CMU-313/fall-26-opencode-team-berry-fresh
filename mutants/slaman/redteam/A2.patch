@@ -1,0 +1,13 @@
+diff --git a/packages/tui/src/context/local.tsx b/packages/tui/src/context/local.tsx
+index 19e3dac..49ac762 100644
+--- a/packages/tui/src/context/local.tsx
++++ b/packages/tui/src/context/local.tsx
+@@ -179,7 +179,7 @@ export function mergeBookmarks(
+     const inBase = baseIds.has(id)
+ 
+     if (inMine && inTheirs) {
+-      result.push(mineById.get(id)!)
++      result.push(theirsById.get(id)!)
+     } else if (inMine && !inTheirs) {
+       if (!inBase) result.push(mineById.get(id)!)
+     } else if (!inMine && inTheirs) {
