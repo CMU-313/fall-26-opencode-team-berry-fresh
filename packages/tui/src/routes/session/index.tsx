@@ -1,3 +1,5 @@
+import { undoPrompt, messagesBeforeRevert } from "./undo"
+import { DialogUndoConflict, undoWithConflicts } from "./dialog-undo-conflict"
 import {
   batch,
   createContext,
@@ -214,12 +216,7 @@ export function Session() {
       .toSorted((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
   })
   const messages = createMemo(() => sync.data.message[route.sessionID] ?? [])
-  const messagesBeforeRevert = () => {
-    const messageID = session()?.revert?.messageID
-    if (!messageID) return messages()
-    const index = messages().findIndex((message) => message.id === messageID)
-    return index === -1 ? messages() : messages().slice(0, index)
-  }
+  const activeMessages = () => messagesBeforeRevert(messages(), session()?.revert?.messageID)
   const foregroundTasks = createMemo(() =>
     sync.data.capabilities.experimentalBackgroundSubagents
       ? messages().flatMap((message) =>
@@ -637,16 +634,17 @@ export function Session() {
       run: async () => {
         const status = sync.data.session_status?.[route.sessionID]
         if (status?.type !== "idle") await sdk.client.session.abort({ sessionID: route.sessionID }).catch(() => {})
-        const message = messagesBeforeRevert().findLast((item) => item.role === "user")
+        const message = activeMessages().findLast((item) => item.role === "user")
         if (!message) return
-        void sdk.client.session
-          .revert({
-            sessionID: route.sessionID,
-            messageID: message.id,
-          })
-          .then(() => {
-            toBottom()
-          })
+        dialog.clear()
+        const reverted = await undoPrompt({
+          request: (decisions) =>
+            sdk.client.session.revert({ sessionID: route.sessionID, messageID: message.id, decisions }),
+          choose: (conflict) => DialogUndoConflict.show(dialog, conflict),
+          toast,
+          onReverted: toBottom,
+        })
+        if (!reverted) return
         const parts = sync.data.part[message.id]
         prompt?.set(
           parts.reduce(
@@ -671,22 +669,25 @@ export function Session() {
       slash: {
         name: "redo",
       },
-      run: () => {
+      run: async () => {
         dialog.clear()
         const messageID = session()?.revert?.messageID
         if (!messageID) return
         const message = messages().find((x) => x.role === "user" && x.id > messageID)
-        if (!message) {
-          void sdk.client.session.unrevert({
-            sessionID: route.sessionID,
-          })
-          prompt?.set({ input: "", parts: [] })
-          return
-        }
-        void sdk.client.session.revert({
-          sessionID: route.sessionID,
-          messageID: message.id,
+        const restored = await undoWithConflicts(
+          (decisions) =>
+            message
+              ? sdk.client.session.revert({ sessionID: route.sessionID, messageID: message.id, decisions })
+              : sdk.client.session.unrevert({ sessionID: route.sessionID }),
+          (conflict) =>
+            message
+              ? DialogUndoConflict.show(dialog, conflict)
+              : Promise.reject(new Error("Redo conflicts with manual edits; files were preserved")),
+        ).catch((error: unknown) => {
+          toast.show({ message: error instanceof Error ? error.message : "Failed to redo prompt", variant: "error" })
+          return false
         })
+        if (restored && !message) prompt?.set({ input: "", parts: [] })
       },
     },
     {
@@ -898,7 +899,7 @@ export function Session() {
       value: "messages.copy",
       category: "Session",
       run: () => {
-        const lastAssistantMessage = messagesBeforeRevert().findLast((message) => message.role === "assistant")
+        const lastAssistantMessage = activeMessages().findLast((message) => message.role === "assistant")
         if (!lastAssistantMessage) {
           toast.show({ message: "No assistant messages found", variant: "error" })
           dialog.clear()

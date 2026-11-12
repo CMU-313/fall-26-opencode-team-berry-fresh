@@ -1,0 +1,16 @@
+{
+  "testRunner": "command",
+  "commandRunner": {
+    "command": "bun test --timeout 180000 test/session/revert.property.test.ts"
+  },
+  "mutate": [
+    "src/snapshot/index.ts:458-531"
+  ],
+  "coverageAnalysis": "off",
+  "reporters": [
+    "html",
+    "clear-text",
+    "progress",
+    "json"
+  ]
+}

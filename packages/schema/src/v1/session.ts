@@ -95,6 +95,7 @@ export const PatchPart = Schema.Struct({
   ...partBase,
   type: Schema.Literal("patch"),
   hash: Schema.String,
+  after: Schema.optional(Schema.String),
   files: Schema.Array(Schema.String),
 }).annotate({ identifier: "PatchPart" })
 export type PatchPart = Types.DeepMutable<Schema.Schema.Type<typeof PatchPart>>

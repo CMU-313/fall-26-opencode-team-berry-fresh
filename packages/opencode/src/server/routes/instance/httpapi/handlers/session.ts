@@ -1,3 +1,4 @@
+import { UndoConflictError } from "../errors"
 import { PermissionV1 } from "@opencode-ai/core/v1/permission"
 import { Agent } from "@/agent/agent"
 import { SessionV1 } from "@opencode-ai/core/v1/session"
@@ -351,12 +352,28 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
       payload: typeof RevertPayload.Type
     }) {
       yield* requireSession(ctx.params.sessionID)
-      return yield* SessionError.mapBusy(revertSvc.revert({ sessionID: ctx.params.sessionID, ...ctx.payload }))
+      return yield* SessionError.mapBusy(
+        revertSvc
+          .revert({ sessionID: ctx.params.sessionID, ...ctx.payload })
+          .pipe(
+            Effect.catchTag("UndoConflict", (error) =>
+              Effect.fail(new UndoConflictError({ conflicts: error.conflicts })),
+            ),
+          ),
+      )
     })
 
     const unrevert = Effect.fn("SessionHttpApi.unrevert")(function* (ctx: { params: { sessionID: SessionID } }) {
       yield* requireSession(ctx.params.sessionID)
-      return yield* SessionError.mapBusy(revertSvc.unrevert({ sessionID: ctx.params.sessionID }))
+      return yield* SessionError.mapBusy(
+        revertSvc
+          .unrevert({ sessionID: ctx.params.sessionID })
+          .pipe(
+            Effect.catchTag("UndoConflict", (error) =>
+              Effect.fail(new UndoConflictError({ conflicts: error.conflicts })),
+            ),
+          ),
+      )
     })
 
     const permissionRespond = Effect.fn("SessionHttpApi.permissionRespond")(function* (ctx: {

@@ -1,0 +1,17 @@
+# Inverted permission check (R3): allow conflicting restores without approval.
+# A small !== to === change reverses the protection.
+
+## I used AI to learn how to convert my mutant into the appropriate Typescript
+
+diff --git a/packages/opencode/src/snapshot/index.ts b/packages/opencode/src/snapshot/index.ts
+--- a/packages/opencode/src/snapshot/index.ts
++++ b/packages/opencode/src/snapshot/index.ts
+@@ -481,7 +481,7 @@
+                     merged = Undo.merge(before.text, after.text, text)
+                 }
+                 if (
+-                  decision?.choice !== "overwrite" &&
++                  decision?.choice === "overwrite" &&
+                   (expected === undefined || hash !== expected?.hash) &&
+                   merged === undefined
+                 ) {
